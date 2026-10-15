@@ -1,0 +1,26 @@
+{
+  "name": "yamnet/classification",
+  "description": "Recognizes 521 sound event classes including human sounds, animals, objects etc. 8 bit quantized internally.",
+  "version": "1",
+  "author": "MediaPipe",
+  "license": "Apache License. Version 2.0 http://www.apache.org/licenses/LICENSE-2.0.",
+  "sample_rate": 16000,
+  "channels": 1,
+  "input": {
+    "name": "waveform_binary",
+    "dtype": "float32",
+    "shape": [
+      15600
+    ]
+  },
+  "output": {
+    "name": "tower0/network/layer32/final_output",
+    "dtype": "float32",
+    "shape": [
+      1,
+      521
+    ]
+  },
+  "embedded_preprocessing": "waveform to log-mel features inside graph; provide PCM / 32768 only",
+  "metadata_buffer_sha256": "8c86f7566f69882187b2c13dbad93ebd37c613b652168feefb25d7f23dd3625f"
+}

@@ -1,0 +1,57 @@
+# Gradle / Android Studio
+.gradle/
+**/build/
+.idea/
+*.iml
+local.properties
+.externalNativeBuild/
+.cxx/
+
+# Build and packaged artifacts
+*.apk
+*.aab
+*.apks
+*.idsig
+*.hprof
+
+# Signing, local credentials and machine-specific config
+*.jks
+*.keystore
+*.p12
+*.pem
+.env
+.env.*
+
+# Model weights: retrieve fixed official files with tools/model_tool.py
+*.tflite
+!app/src/main/assets/model_manifest.json
+!app/src/main/assets/model_metadata.json
+!models/**/manifest.json
+!models/**/metadata.json
+!models/**/labels.txt
+
+# Audio and large generated data
+/data/raw/*
+/data/processed/*
+/data/annotations/*
+/data/splits/*
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.pcm
+
+# Evaluation and local run logs
+/evaluation/*.log
+/evaluation/debug/
+/evaluation/reports/*.jsonl
+/evaluation/reports/*.csv
+
+# Python caches / local tooling
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# OS files
+.DS_Store
+Thumbs.db

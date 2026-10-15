@@ -1,0 +1,5 @@
+numpy==2.2.6
+ai-edge-litert==2.1.0
+flatbuffers==25.12.19
+tflite==2.18.0
+scipy==1.15.3

@@ -1,0 +1,20 @@
+{"note":"Demo 启发式，未校准；每个原生标签独立判定，不相加分数。短事件单帧可触发。长事件1.2秒内两帧。", "rules":[
+{"label":"Cough","candidate":0.08,"on":0.30,"off":0.12,"hits":1,"release_ms":650,"merge_ms":1100},
+{"label":"Throat clearing","candidate":0.06,"on":0.24,"off":0.10,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Sneeze","candidate":0.08,"on":0.32,"off":0.12,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Screaming","candidate":0.08,"on":0.30,"off":0.14,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Crying, sobbing","candidate":0.08,"on":0.30,"off":0.14,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Baby cry, infant cry","candidate":0.06,"on":0.26,"off":0.12,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Wail, moan","candidate":0.06,"on":0.25,"off":0.10,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Groan","candidate":0.06,"on":0.25,"off":0.10,"hits":1,"release_ms":650,"merge_ms":1000},
+{"label":"Knock","candidate":0.08,"on":0.40,"off":0.18,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Tap","candidate":0.08,"on":0.38,"off":0.16,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Slap, smack","candidate":0.07,"on":0.32,"off":0.14,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Smash, crash","candidate":0.06,"on":0.32,"off":0.12,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Glass","candidate":0.06,"on":0.30,"off":0.12,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Shatter","candidate":0.06,"on":0.30,"off":0.12,"hits":1,"release_ms":650,"merge_ms":900},
+{"label":"Walk, footsteps","candidate":0.08,"on":0.30,"off":0.14,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Alarm","candidate":0.08,"on":0.32,"off":0.14,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Smoke detector, smoke alarm","candidate":0.06,"on":0.28,"off":0.12,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Fire alarm","candidate":0.06,"on":0.28,"off":0.12,"hits":2,"release_ms":1100,"merge_ms":1300}
+]}
