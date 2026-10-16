@@ -1,0 +1,5 @@
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <background android:drawable="@color/icon_background" />
+    <foreground android:drawable="@drawable/ic_guardian_launcher" />
+    <monochrome android:drawable="@drawable/ic_guardian" tools:targetApi="33" />
+</adaptive-icon>

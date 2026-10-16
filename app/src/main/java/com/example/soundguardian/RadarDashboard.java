@@ -12,6 +12,7 @@ import java.util.*;
 
 /** 单一守护场景；原生模型信息进入独立调试页。 */
 final class RadarDashboard {
+  private static final float RADAR_MIN_SCORE=.20f;
   private final MainActivity activity;
   private final SoundRadarView radar;
   private final TextView state,meter,badge,bubbleTitle,bubbleTime;
@@ -53,7 +54,7 @@ final class RadarDashboard {
     snapshot=new Intent(intent);float[] scores=intent.getFloatArrayExtra("score");String[] labels=intent.getStringArrayExtra("labels");if(scores==null||labels==null)return;
     if(!active){listening(true);activity.listening=true;activity.toggle.setText("停止守护");}state.setText("●  正在守护");
     Integer[] order=new Integer[scores.length];for(int i=0;i<order.length;i++)order[i]=i;Arrays.sort(order,(x,y)->Float.compare(scores[y],scores[x]));
-    ArrayList<String> names=new ArrayList<>();ArrayList<Float> weights=new ArrayList<>();for(int j=0;j<Math.min(3,order.length);j++){int index=order[j];names.add(activity.displayName(labels[index]));weights.add(scores[index]);}radar.offer(names,weights);
+    ArrayList<String> names=new ArrayList<>();ArrayList<Float> weights=new ArrayList<>();for(int j=0;j<order.length&&names.size()<3;j++){int index=order[j];if(scores[index]<RADAR_MIN_SCORE)break;names.add(activity.displayName(labels[index]));weights.add(scores[index]);}radar.offer(names,weights);
     float db=intent.getFloatExtra("dbfs",-96);meter.setText(String.format(Locale.CHINA,"%.1f dBFS",db));level.setProgress((int)Math.max(0,Math.min(100,(db+96)/96*100)),true);
     ArrayList<Bundle> incoming=intent.getParcelableArrayListExtra("events");if(incoming!=null){records=incoming;for(Bundle record:records){String id=record.getString("id");if(seen.add(id)){unread.add(id);latest=record;showBubble(record);}}
       if(latest!=null)for(Bundle record:records)if(Objects.equals(latest.getString("id"),record.getString("id")))latest=record;

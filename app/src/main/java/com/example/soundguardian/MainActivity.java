@@ -1,4 +1,5 @@
 package com.example.soundguardian;
+import com.soundguardian.core.AppConfig;
 import android.Manifest;import android.app.*;import android.content.*;import android.content.pm.PackageManager;import android.os.*;import android.view.*;import android.widget.*;import androidx.appcompat.app.AppCompatActivity;import java.util.*;
 public class MainActivity extends AppCompatActivity{
  TextView status,candidates,inputInfo,events; ProgressBar level; Button toggle; boolean listening; BroadcastReceiver rx; AppConfig config; RadarDashboard dashboard;

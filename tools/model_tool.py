@@ -65,7 +65,8 @@ def main():
         (PACKAGE / name).write_text(json.dumps(obj, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     (PACKAGE / 'labels.txt').write_text('\n'.join(labels)+'\n', encoding='utf-8')
     if args.install:
-        assets = ROOT / 'app/src/main/assets'
+        assets = ROOT / 'core/src/main/assets'
+        assets.mkdir(parents=True, exist_ok=True)
         target = assets / 'yamnet.tflite'
         if target.exists() and hashlib.sha256(target.read_bytes()).hexdigest() != SHA:
             backup = ROOT / 'models/android-backup'; backup.mkdir(parents=True, exist_ok=True)

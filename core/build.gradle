@@ -1,0 +1,59 @@
+plugins { id 'com.android.library' }
+
+android {
+    namespace 'com.soundguardian.core'
+    compileSdk 34
+    defaultConfig { minSdk 26 }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    androidResources { noCompress 'tflite' }
+}
+
+dependencies {
+    implementation 'org.tensorflow:tensorflow-lite:2.17.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+
+// 所有应用只允许使用这一份资产，禁止应用本地同名文件覆盖 Library assets。
+def sharedAssets = file('src/main/assets')
+tasks.register('verifySharedAssets') {
+    doLast {
+        def manifest = new groovy.json.JsonSlurper().parse(new File(sharedAssets, 'model_manifest.json'))
+        def model = new File(sharedAssets, 'yamnet.tflite')
+        if (!model.isFile()) throw new GradleException('缺少共享模型，请运行 tools/model_tool.py --install 或 anlan/tools/prepare-model.ps1')
+        def sha = java.security.MessageDigest.getInstance('SHA-256')
+        model.withInputStream { stream ->
+            byte[] buffer = new byte[8192]
+            int count
+            while ((count = stream.read(buffer)) != -1) sha.update(buffer, 0, count)
+        }
+        if (sha.digest().encodeHex().toString() != manifest.sha256) throw new GradleException('共享模型 SHA-256 与 manifest 不一致')
+        def labels = new File(sharedAssets, 'yamnet_labels.txt').readLines('UTF-8')
+        if (labels.size() != manifest.classes || labels.toSet().size() != labels.size()) throw new GradleException('共享标签数量或唯一性不符')
+        new java.util.zip.ZipFile(model).withCloseable { archive ->
+            def entry = archive.getEntry('yamnet_label_list.txt')
+            if (entry == null || archive.getInputStream(entry).withCloseable { it.readLines('UTF-8') } != labels)
+                throw new GradleException('共享标签顺序必须与模型内嵌标签完全一致')
+        }
+        def mapping = new groovy.json.JsonSlurper().parse(new File(sharedAssets, 'zh_labels.json'), 'UTF-8')
+        if (!labels.every { mapping[it] instanceof String && !mapping[it].isEmpty() }) throw new GradleException('共享中文映射不完整')
+        def rules = new groovy.json.JsonSlurper().parse(new File(sharedAssets, 'event_rules.json'), 'UTF-8').rules
+        if (rules*.label.toSet().size() != rules.size()) throw new GradleException('共享事件规则含重复标签')
+        rules.each { rule ->
+            if (!labels.contains(rule.label) || !(0 <= rule.off && rule.off < rule.on && rule.on <= 1)
+                    || rule.hits < 1 || rule.release_ms < 0 || rule.merge_ms < 0) throw new GradleException("共享事件规则不合法：${rule.label}")
+        }
+        rootProject.allprojects.findAll { it != project && it.plugins.hasPlugin('com.android.application') }.each { app ->
+            app.android.sourceSets.each { source ->
+                source.assets.srcDirs.each { directory ->
+                    sharedAssets.listFiles().each { asset ->
+                        if (new File(directory, asset.name).exists()) throw new GradleException("${app.path} 不得覆盖共享资产：${asset.name}")
+                    }
+                }
+            }
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifySharedAssets' }

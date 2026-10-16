@@ -6,6 +6,8 @@
 local.properties
 .externalNativeBuild/
 .cxx/
+**/captures/
+**/.kotlin/
 
 # Build and packaged artifacts
 *.apk
@@ -24,8 +26,8 @@ local.properties
 
 # Model weights: retrieve fixed official files with tools/model_tool.py
 *.tflite
-!app/src/main/assets/model_manifest.json
-!app/src/main/assets/model_metadata.json
+!core/src/main/assets/model_manifest.json
+!core/src/main/assets/model_metadata.json
 !models/**/manifest.json
 !models/**/metadata.json
 !models/**/labels.txt

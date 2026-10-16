@@ -1,0 +1,7 @@
+<resources>
+    <item name="face" type="id" />
+    <item name="menu" type="id" />
+    <item name="emotion_name" type="id" />
+    <item name="event_name" type="id" />
+    <item name="sound_level" type="id" />
+</resources>

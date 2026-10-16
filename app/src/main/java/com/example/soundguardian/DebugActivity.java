@@ -1,4 +1,5 @@
 package com.example.soundguardian;
+import com.soundguardian.core.AppConfig; import com.soundguardian.core.EventEngine;
 
 import android.content.*;
 import android.os.Bundle;

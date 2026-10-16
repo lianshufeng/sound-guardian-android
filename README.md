@@ -28,11 +28,11 @@ python tools/model_tool.py --install
 脚本下载固定版本并校验 SHA-256、tensor、metadata 和 521 个标签；从模型内嵌 `yamnet_label_list.txt` 提取标签，无需手动下载 CSV。
 
 - 官方包：`models/official/yamnet-float32-1/`，含 `model.tflite`、`labels.txt`、`metadata.json`、`manifest.json`。
-- Android 启用包：`app/src/main/assets/` 中的 `yamnet.tflite`、`yamnet_labels.txt`、`model_metadata.json`、`model_manifest.json`。
+- Android 启用包：`core/src/main/assets/` 中的 `yamnet.tflite`、`yamnet_labels.txt`、`model_metadata.json`、`model_manifest.json`，由两款应用共同引用。
 - 安装前发现不同权重时，原 assets 权重备份到 `models/android-backup/<SHA-256>.tflite`，不会删除原文件。
 - 应用启动会验证固定哈希和输入输出契约；回退官方版本可重新执行 `--install`。
 - 权重由脚本获取，不提交 Git；manifest、metadata、标签和中文映射提交源码库。Gradle 不自动下载模型，依赖首次解析仍需要网络。
-- `tools/get_yamnet.ps1` 是早期遗留下载脚本，不执行当前固定哈希校验，当前流程请使用 `model_tool.py`。
+- `tools/get_yamnet.ps1` 是已停用的早期下载脚本，避免误写旧应用 assets；当前流程请使用 `model_tool.py --install`，或 `anlan/tools/prepare-model.ps1`。
 
 ## 打开与构建
 用 Android Studio Jellyfish（支持 AGP 8.4）或更新版本打开仓库根目录，不能只打开 `app/`。固定环境：Gradle Wrapper 8.6、AGP 8.4.2、compile/target SDK 34、最低 Android 8.0（API 26）。建议 JDK 17；本机也使用 JDK 21 完成过构建。项目使用 Java 17，无 Kotlin 编译插件；Kotlin BOM 1.9.24 用于统一传递依赖。
@@ -62,7 +62,7 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 - 打开“AI智能守护”，允许麦克风权限，点击“开始守护”；拒绝权限后需重新授权再点击。
 - 前台服务负责持续监听，系统提供麦克风使用指示和服务通知；通知展示受系统通知授权及设置影响。
 - 雷达扫描、标签颜色和淡入淡出用于观察候选；标签位置仅为视觉展示，不表示方向、距离。
-- 数字角标为模型分数 × 100 后的整数，不是准确率。候选按分数和少量随机变化停留，含淡出最长约 4 秒。
+- 数字角标为模型分数 × 100 后的整数，不是准确率。候选总显示时长为模型分数 × 5 秒，包含淡入淡出，例如 60 分显示 3 秒。
 - 左上角小字为输入电平 dBFS，未校准成实际环境声压级 dB SPL。
 - 确认事件出现可点击气泡；事件记录入口显示未读数量，点击详情可查看时间、状态和估计持续时间。
 - 右上角 `•••` 进入调试页：先显示事件规则，向下连续滚动查看模型、实时耗时、输入和完整 521 类原生分数。
@@ -70,7 +70,9 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 - 原始录音不默认保存；目前没有测试录音保存/导出/清理功能，也没有反馈标注入口。
 
 ## 工程约定
-`app` 是单模块工程，职责以类区分：
+工程包含 `:app`（原应用）、`:anlan`（安澜）和 Android Library `:core`（共享声音引擎）。两款应用都依赖 `:core`，包名、界面、通知和历史数据独立。
+
+模型权重、原生标签、中文映射、`event_rules.json` 仅在 `core/src/main/assets/` 维护；推理器、配置加载、事件确认与音频参数仅在 `core/src/main/java/com/soundguardian/core/` 维护。`core:verifySharedAssets` 在构建前校验模型哈希、标签和规则，并禁止 App 的 assets 覆盖同名文件。修改共享规则后需要重新打包两款应用；已安装 APK 不会自动更新。
 
 | 文件 | 职责 |
 |---|---|
@@ -135,7 +137,7 @@ python tools/offline_eval.py "data/raw/自备录音.wav"
 
 离线脚本支持 PCM16 WAV，可混合声道并重采样；短片段末尾补零，实时采集则等待完整输入。首次执行会下载官方猫叫 WAV。生成的逐帧 JSONL 包含 521 类原生分数和咳嗽、清嗓、敲击、背景分数；不能只挑高分样例评估效果。
 
-同一 15600 样本 PCM 与桌面输出已写入 `app/src/androidTest/assets/` 作为后续 Android parity 测试夹具。
+同一 15600 样本 PCM 与桌面输出保存在 `core/src/androidTest/assets/`，两款应用的仪器测试共用同一组夹具。
 
 ## 限制与验证
 已执行 Debug 构建、签名与 APK 内模型哈希校验；已有短咳嗽事件确认、结束、合并单元测试。早期曾执行启动/Activity 重建仪器测试；后续界面多次调整，不能视作当前版本所有交互均完成回归。当前已在 V2505A 真机安装、启动并体验监听；后续仅在用户明确要求时启动模拟器。

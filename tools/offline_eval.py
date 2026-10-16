@@ -47,7 +47,7 @@ def main():
     # 用实际 PCM16 样本在 Android instrumentation 重放同一输入。
     fixture=(load_wav(sample)[:15600]*32768).clip(-32768,32767).astype('<i2')
     x=fixture.astype(np.float32)/32768;i.set_tensor(inp,x);i.invoke()
-    dest=ROOT/'app/src/androidTest/assets';dest.mkdir(parents=True,exist_ok=True)
+    dest=ROOT/'core/src/androidTest/assets';dest.mkdir(parents=True,exist_ok=True)
     (dest/'parity.pcm').write_bytes(fixture.tobytes())
     (dest/'parity_scores.txt').write_text('\n'.join(str(float(v)) for v in i.get_tensor(out)[0]),encoding='utf-8')
     (report/'summary.json').write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')

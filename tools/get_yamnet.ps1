@@ -1,4 +1,5 @@
 # 模型安装脚本（PowerShell）
+throw 'Legacy downloader disabled. Use tools/model_tool.py --install or anlan/tools/prepare-model.ps1 for the shared core assets.'
 $url = 'https://tfhub.dev/google/lite-model/yamnet/classification/tflite/1?lite-format=tflite'
 $out = 'app/src/main/assets/yamnet.tflite'
 New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
