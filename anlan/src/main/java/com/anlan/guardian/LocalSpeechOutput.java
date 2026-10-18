@@ -43,28 +43,32 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
     private volatile long resourceEpoch;
     private String initializationError;
     private volatile boolean closed, memoryTrimmed;
+    private volatile boolean keepModel;
     private Job current;
     private AudioTrack playing;
     private final Runnable initialize;
-    private long lastSynthesisAt;
+    private volatile long lastSynthesisAt;
     private final Runnable idleRelease = this::releaseIfIdle;
     private void releaseIfIdle() { WORKER.execute(() -> {
-        if (SystemClock.elapsedRealtime() - lastSynthesisAt >= idleReleaseMs) releaseSynthesizer();
+        if (!keepModel && SystemClock.elapsedRealtime() - lastSynthesisAt >= idleReleaseMs) releaseSynthesizer();
     }); }
 
     LocalSpeechOutput(Context context, Consumer<String> status) {
         app = context.getApplicationContext(); audioManager = app.getSystemService(AudioManager.class);
+        keepModel = PerformanceSettings.highPerformance(app);
         ResourceBudget budget=ResourceBudget.read(app);idleReleaseMs=budget.modelIdleMs;
         cache=new SpeechAudioCache<>(budget.speechCacheEntries,budget.speechCacheBytes);
         try { cacheRevision=AppConfig.read(app,"tts/config.json")+new JSONObject(AppConfig.read(app,"tts/manifest.json")).getString("archive_sha256"); }
         catch(Exception error){throw new IllegalStateException("语音配置读取失败",error);}
         initialize = () -> {
+            long initialEpoch = resourceEpoch;
+            boolean wakeReady = false;
             try {
-                if (closed) return;
-                ensureSynthesizer(()->!closed);
-                GeneratedAudio wake=synthesize("我在",()->!closed);
-                remember("我在",new PreparedAudio(pcm(wake.getSamples(),wake.getSampleRate()),wake.getSampleRate()),resourceEpoch);
-                main.post(() -> { if (!closed) status.accept("已就绪 · 中文女声 zf_001"); });
+                if (closed || memoryTrimmed) return;
+                ensureSynthesizer(()->!closed&&resourceEpoch==initialEpoch);
+                GeneratedAudio wake=synthesize("我在",()->!closed&&resourceEpoch==initialEpoch);
+                remember("我在",new PreparedAudio(pcm(wake.getSamples(),wake.getSampleRate()),wake.getSampleRate()),initialEpoch);
+                wakeReady = true;
                 long warmLease=requests.get();
                 long warmEpoch=resourceEpoch;
                 if(!closed&&current==null&&!memoryTrimmed){
@@ -73,10 +77,15 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
                 }
             } catch (java.util.concurrent.CancellationException cancelled) {
                 // 用户请求优先于空闲补齐缓存，不把取消当作初始化故障。
+                releaseSynthesizer();
             } catch (Exception | LinkageError error) {
                 initializationError = error.toString();
                 main.post(() -> { if (!closed) status.accept("不可用：" + initializationError); });
-            } finally { releaseSynthesizer(); }
+            } finally {
+                if (closed || memoryTrimmed || initializationError != null || !keepModel) releaseSynthesizer();
+                if (wakeReady && initializationError == null)
+                    main.post(() -> { if (!closed&&resourceEpoch==initialEpoch) status.accept("已就绪 · 中文女声 zf_001"); });
+            }
         };
         WORKER.execute(initialize);
     }
@@ -127,14 +136,21 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
     }
 
     @Override public void stop() { synchronized (lock) { cancelLocked(); } }
+    void performanceModeChanged() {
+        keepModel = PerformanceSettings.highPerformance(app);
+        main.removeCallbacks(idleRelease);
+        if (closed) return;
+        if (keepModel) prewarm();
+        else main.postDelayed(idleRelease, Math.max(0, idleReleaseMs - (SystemClock.elapsedRealtime() - lastSynthesisAt)));
+    }
     void prewarm(){
-        if(closed||ResourceBudget.read(app).constrained||!warming.compareAndSet(false,true))return;
+        if(closed||(!keepModel&&ResourceBudget.read(app).constrained)||!warming.compareAndSet(false,true))return;
         long lease=requests.get();
         long epoch=resourceEpoch;
         WORKER.execute(()->{
             try{ensureSynthesizer(()->!closed&&requests.get()==lease&&resourceEpoch==epoch);lastSynthesisAt=SystemClock.elapsedRealtime();}
             catch(Exception|LinkageError ignored){ /* 提前准备失败由实际播报重试，不提前报告播放失败。 */ }
-            finally{warming.set(false);if(!closed){main.removeCallbacks(idleRelease);main.postDelayed(idleRelease,idleReleaseMs);}}
+            finally{warming.set(false);if(!closed&&!keepModel){main.removeCallbacks(idleRelease);main.postDelayed(idleRelease,idleReleaseMs);}}
         });
     }
     void trimMemory() {
@@ -218,7 +234,7 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
                 else stream.run(new SpeechStreamPipeline.Engine<PreparedAudio>() {
                     @Override public PreparedAudio synthesize(InteractionPorts.SpeechRequest segment) { return prepare(segment); }
                     @Override public void play(PreparedAudio audio, InteractionPorts.SpeechRequest segment) throws Exception { Job.this.play(audio, segment); }
-                    @Override public void idle() { if (SystemClock.elapsedRealtime() - lastSynthesisAt >= idleReleaseMs) releaseSynthesizer(); }
+                    @Override public void idle() { if (!keepModel && SystemClock.elapsedRealtime() - lastSynthesisAt >= idleReleaseMs) releaseSynthesizer(); }
                     @Override public void failed(Exception error) { finish(1, error.toString()); }
                 }, PLAYBACK, SystemClock::elapsedRealtime);
                 if (stream != null && active()) finish(0, "");
@@ -227,7 +243,7 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
             } finally {
                 synchronized (lock) {
                     main.removeCallbacks(idleRelease);
-                    if (!closed && synthesizer != null) main.postDelayed(idleRelease, idleReleaseMs);
+                    if (!closed && !keepModel && synthesizer != null) main.postDelayed(idleRelease, idleReleaseMs);
                 }
             }
         }
@@ -276,19 +292,26 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
                         }, main).build();
                 AudioTrack output = track;
                 AudioFocusRequest focusRequest = focus;
-                FutureTask<Boolean> start = new FutureTask<>(() -> {
-                    synchronized (lock) {
-                        if (!active()) return false;
-                        if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
-                            throw new IllegalStateException("未获得播报音频焦点");
-                        output.play();
-                    }
-                    if (stream == null) progress.onStart(); else progress.onSegmentStart(segment);
-                    InteractionTrace.record(InteractionTrace.Stage.PLAYBACK_START,traceId,submittedAt,samples.length);
-                    return true;
-                });
-                main.post(start);
-                if (!start.get(5, TimeUnit.SECONDS)) return;
+                boolean startedPlayback = false;
+                while (active() && !startedPlayback) {
+                    FutureTask<Boolean> start = new FutureTask<>(() -> {
+                        if (!active() || !progress.beforePlayback()) return false;
+                        synchronized (lock) {
+                            if (!active()) return false;
+                            if (audioManager.requestAudioFocus(focusRequest) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED)
+                                throw new IllegalStateException("未获得播报音频焦点");
+                            output.play();
+                        }
+                        if (stream == null) progress.onStart(); else progress.onSegmentStart(segment);
+                        InteractionTrace.record(InteractionTrace.Stage.PLAYBACK_START,traceId,submittedAt,samples.length);
+                        return true;
+                    });
+                    main.post(start);
+                    try { startedPlayback = start.get(5, TimeUnit.SECONDS); }
+                    catch (Exception error) { start.cancel(false); throw error; }
+                    if (!startedPlayback) SystemClock.sleep(20);
+                }
+                if (!startedPlayback) return;
                 long deadline = SystemClock.elapsedRealtime() + samples.length * 1000L / audio.sampleRate + 5000;
                 while (active() && Integer.toUnsignedLong(track.getPlaybackHeadPosition()) < samples.length) {
                     if (SystemClock.elapsedRealtime() >= deadline) throw new IllegalStateException("播报播放超时");

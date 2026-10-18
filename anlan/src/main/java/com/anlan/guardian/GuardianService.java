@@ -54,6 +54,8 @@ public final class GuardianService extends Service {
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
         latestStartId = startId;
+        if (speechOutput != null) speechOutput.performanceModeChanged();
+        if (understandingWorker != null) understandingWorker.performanceModeChanged();
         if (care != null && !getSharedPreferences("care", MODE_PRIVATE).getBoolean("enabled", false)) care.interrupt("USER_DISABLED");
         if (understandingWorker != null) understandingWorker.setContinuous(getSharedPreferences("interaction", MODE_PRIVATE).getBoolean("companion_listening", false));
         if (!running && audioLoopPending) { restartRequested = true; return START_NOT_STICKY; }
@@ -219,6 +221,7 @@ public final class GuardianService extends Service {
                     }
                 }
                 long dispatchAt = System.nanoTime();
+                GuardianRuntime.publishSoundLevel(sessionToken, readBuffer, count, SystemClock.elapsedRealtime());
                 wakeWord.acceptPcm(readBuffer, count, SoundContract.SAMPLE_RATE);
                 UnderstandingWorker understanding = understandingWorker;
                 if (understanding != null) understanding.acceptPcm(readBuffer, count, SoundContract.SAMPLE_RATE);
@@ -371,12 +374,15 @@ public final class GuardianService extends Service {
     }
 
     private SpeechSession beginSpeech(InteractionPorts.SpeechRequest request, InteractionPorts.SpeechStreamListener listener) {
+        return beginSpeech(request, listener, false);
+    }
+    private SpeechSession beginSpeech(InteractionPorts.SpeechRequest request, InteractionPorts.SpeechStreamListener listener, boolean deferInput) {
         if (currentSpeech != null) currentSpeech.onCancelled();
         SpeechSession progress = new SpeechSession(request, listener);
         currentSpeech = progress;
         speechOutput.stop(); speechBusy = true;
         if (wakeWorker != null) wakeWorker.setSuppressed(true);
-        if (understandingWorker != null) understandingWorker.setSuppressed(true);
+        if (!deferInput && understandingWorker != null) understandingWorker.setSuppressed(true);
         publishSpeech(progress.displayId, GuardianRuntime.SpeechPhase.PREPARING, request, "");
         return progress;
     }
@@ -388,7 +394,8 @@ public final class GuardianService extends Service {
             if (GuardianRuntime.snapshot().events.stream().anyMatch(event -> event.active && event.priority() >= 3))
                 throw new IllegalStateException("高优先级守护事件正在处理，暂不接受播报");
             if (care != null) care.interrupt("OTHER_SPEECH");
-            SpeechSession progress = beginSpeech(null, listener);
+            boolean deferInput = source == InteractionPorts.SpeechRequest.Source.DIALOGUE && conversation != null && conversation.acceptingSupplement();
+            SpeechSession progress = beginSpeech(null, listener, deferInput);
             try { return speechOutput.openStream(source, eventId, progress); }
             catch (Exception error) { progress.onError(error.toString()); throw error; }
         });
@@ -407,6 +414,11 @@ public final class GuardianService extends Service {
             this.request = request; this.listener = listener;
         }
         boolean current() { return isCurrent(sessionToken) && id == speechRequestId && !terminal; }
+        @Override public boolean beforePlayback() {
+            if (!current() || listener != null && !listener.beforePlayback()) return false;
+            if (understandingWorker != null) understandingWorker.setSuppressed(true);
+            return true;
+        }
         @Override public void onStart() {
             if (current()) {
                 publishSpeech(displayId, GuardianRuntime.SpeechPhase.PLAYING, request, "");

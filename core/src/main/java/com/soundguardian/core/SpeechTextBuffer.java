@@ -34,6 +34,10 @@ public final class SpeechTextBuffer {
         return !ended && !cancelled && pending.length() == 0 && now - lastInputAt >= inputTimeoutMs;
     }
     public synchronized int pendingChars() { return pending.length(); }
+    /** 本地合成及播放背压结束后开始等待上游，避免把本地处理耗时误报为输入超时。 */
+    public synchronized void consumerReady(long now) {
+        if (!ended && !cancelled && pending.length() == 0) lastInputAt = Math.max(lastInputAt, now);
+    }
 
     /** 暂无完整分句返回 null；end 后会输出剩余文字。保留原始字符，不 trim 或丢弃空白。 */
     public synchronized String poll(long now) {

@@ -92,17 +92,18 @@ public final class AiDialogueDeviceTest {
                 await(()->input.get()!=null,15000); String id=GuardianRuntime.conversationId();
                 main(()->{InteractionPorts.SpeechInput.Result callback=input.get();callback.onUnderstanding(new VoiceUnderstandingResult(999,SystemClock.elapsedRealtime(),"再见","NEUTRAL","zh","Speech",1000,10));callback.onUtteranceEnd();});
                 await(()->!Conversation.active(),5000); CountDownLatch queried=new CountDownLatch(1);AtomicReference<Conversation.Result> stored=new AtomicReference<>();
-                coordinator.get().query(id,value->{stored.set(value);queried.countDown();});assertTrue(queried.await(5,TimeUnit.SECONDS));assertNotNull(stored.get());assertFalse(stored.get().contentStored);assertTrue(stored.get().turns.isEmpty());
+                coordinator.get().query(id,value->{stored.set(value);queried.countDown();});assertTrue(queried.await(5,TimeUnit.SECONDS));assertNotNull(stored.get());assertTrue(stored.get().contentStored);assertFalse(stored.get().turns.isEmpty());
             } finally { main(()->{coordinator.get().close();SpeechPlayback.detach(speechLease[0]);}); }
         }
     }
-    @Test public void conversationStoreRespectsReplySwitchAndCareLookup() throws Exception {
+    @Test public void conversationStoreAutomaticallySavesAndExpiresAfterThreeDays() throws Exception {
         try(CareAcceptanceContext isolated=new CareAcceptanceContext(app);ConversationStore store=new ConversationStore(isolated)) {
             List<Conversation.Turn> turns=Collections.singletonList(new Conversation.Turn("我没事","我在这里。","我在这里。","COMPLETED",Collections.emptyList()));
             Conversation.Result result=new Conversation.Result("session","care-test","S02","event","ENDED","USER_END",System.currentTimeMillis(),turns,false);
-            store.save(result);assertTrue(store.query("care-test").turns.isEmpty());
-            isolated.getSharedPreferences("care",0).edit().putBoolean("save_replies",true).commit();store.save(result);assertEquals("我没事",store.query("session").turns.get(0).userText);
-            isolated.getSharedPreferences("care",0).edit().putBoolean("save_replies",false).commit();assertTrue(store.query("session").turns.isEmpty());
+            store.save(result);assertEquals("我没事",store.query("care-test").turns.get(0).userText);
+            isolated.getSharedPreferences("care",0).edit().putBoolean("save_replies",false).commit();store.save(result);assertEquals("我没事",store.query("session").turns.get(0).userText);
+            store.clean(result.at+3*86400000L-1);assertFalse(store.query("session").turns.isEmpty());
+            store.clean(result.at+3*86400000L+1);assertNull(store.query("session"));
         }
     }
 }

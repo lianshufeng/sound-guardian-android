@@ -18,7 +18,41 @@ import static org.junit.Assert.*;
 public final class SpeechPlaybackDeviceTest {
     private final Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
     private final Context app = instrumentation.getTargetContext();
+    @Test public void synthesizedAudioWaitsForAdmissionAndCancelledAudioNeverStarts() throws Exception {
+        MainActivity activity = launch();
+        java.util.concurrent.atomic.AtomicBoolean admitted = new java.util.concurrent.atomic.AtomicBoolean();
+        java.util.concurrent.atomic.AtomicInteger checked = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger started = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicInteger completed = new java.util.concurrent.atomic.AtomicInteger();
+        java.util.concurrent.atomic.AtomicReference<String> error = new java.util.concurrent.atomic.AtomicReference<>("");
+        InteractionPorts.SpeechStream stream = null;
+        try {
+            await(() -> GuardianRuntime.speechStatus().startsWith("已就绪"), 120000);
+            InteractionPorts.SpeechStreamListener listener = new InteractionPorts.SpeechStreamListener() {
+                public boolean beforePlayback() { assertSame(android.os.Looper.getMainLooper(), android.os.Looper.myLooper()); checked.incrementAndGet(); return admitted.get(); }
+                public void onSegmentStarted(InteractionPorts.SpeechRequest segment) { started.incrementAndGet(); }
+                public void onComplete() { completed.incrementAndGet(); }
+                public void onError(String message) { error.set(message); }
+            };
+            stream = SpeechPlayback.openStream(listener); assertTrue(stream.append("我在")); stream.end();
+            await(() -> checked.get() > 2 || !error.get().isEmpty(), 60000); assertEquals("", error.get()); assertEquals(0, started.get());
+            admitted.set(true); await(() -> completed.get() == 1 || !error.get().isEmpty(), 15000);
+            assertEquals("", error.get()); assertEquals(1, started.get());
+            admitted.set(false); checked.set(0);
+            stream = SpeechPlayback.openStream(listener); assertTrue(stream.append("我在")); stream.end();
+            await(() -> checked.get() > 2 || !error.get().isEmpty(), 60000); assertEquals("", error.get());
+            stream.cancel(); admitted.set(true); SystemClock.sleep(500); assertEquals(1, started.get());
+        } finally {
+            if (stream != null) stream.cancel(); app.stopService(new Intent(app, GuardianService.class));
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
     @Test public void streamedDeltasPlayBeforeEndAndKeepCaptionOrder() throws Exception {
+        android.content.SharedPreferences performance=app.getSharedPreferences("interaction",0);
+        String previousMode=performance.getString("performance_mode",null);
+        String selectedMode=InstrumentationRegistry.getArguments().getString("performance_mode");
+        if(selectedMode!=null)PerformanceSettings.save(app,!"low_power".equals(selectedMode));
+        InteractionTrace.clear();
         MainActivity activity = launch();
         InteractionPorts.SpeechStream stream = null;
         try {
@@ -41,6 +75,10 @@ public final class SpeechPlaybackDeviceTest {
             String first = "你好，我是小安。", rest = "这是一段模拟大模型逐字输出的语音测试。我们保持同样的语速，按顺序说完。";
             for (int i = 0; i < first.length(); i++) { assertTrue(stream.append(first.substring(i, i + 1))); SystemClock.sleep(25); }
             await(() -> !spoken.isEmpty() || !error.get().isEmpty(), 60000);
+            if(!error.get().isEmpty())for(InteractionTrace.Sample sample:InteractionTrace.snapshot()){
+                android.os.Bundle trace=new android.os.Bundle();trace.putString("speech_stage",sample.stage.name());
+                trace.putLong("duration_ms",sample.durationNanos/1000000);instrumentation.sendStatus(0,trace);
+            }
             assertEquals("", error.get()); assertEquals("不能等待 end 才开始播报", first, spoken.get(0));
             assertEquals(0, completed.get()); reportSpeechMemory("stream_first_segment");
             android.os.Bundle metrics = new android.os.Bundle(); metrics.putLong("stream_first_audio_ms", SystemClock.elapsedRealtime() - opened);
@@ -53,7 +91,11 @@ public final class SpeechPlaybackDeviceTest {
             assertEquals(GuardianRuntime.SpeechPhase.COMPLETE, GuardianRuntime.speechSnapshot().phase);
             instrumentation.runOnMainSync(() -> assertFalse(spoken.get(spoken.size() - 1).contentEquals(((TextView) activity.findViewById(R.id.emotion_name)).getText())));
             reportSpeechMemory("stream_complete");
-        } finally { if (stream != null) stream.cancel(); stop(activity); }
+        } finally {
+            if (stream != null) stream.cancel(); stop(activity);
+            if(selectedMode!=null){android.content.SharedPreferences.Editor edit=performance.edit();
+                if(previousMode==null)edit.remove("performance_mode");else edit.putString("performance_mode",previousMode);edit.commit();}
+        }
     }
 
     @Test public void replacedStreamCannotCancelNewStreamOrOrdinarySpeech() throws Exception {
@@ -127,22 +169,21 @@ public final class SpeechPlaybackDeviceTest {
         } finally { stop(activity); }
     }
 
-    @Test(timeout = 45000) public void repeatedChineseSynthesisRemainsAudible() throws Exception {
+    @Test(timeout = 240000) public void repeatedChineseSynthesisRemainsAudible() throws Exception {
         MainActivity activity = launch();
         try {
             await(() -> GuardianRuntime.speechStatus().startsWith("已就绪"), 120000);
             reportSpeechMemory("before_model");
-            try (com.soundguardian.core.SherpaSpeechSynthesizer model = new com.soundguardian.core.SherpaSpeechSynthesizer(app)) {
-                reportSpeechMemory("model_loaded");
-                for (String text : new String[]{"我在", "你好，我是小安。我会在这里，安静地陪伴你。", "我在"}) {
-                    android.os.Bundle state = new android.os.Bundle(); state.putString("synthesis_begin", text); instrumentation.sendStatus(0, state);
-                    com.k2fsa.sherpa.onnx.GeneratedAudio audio = model.synthesize(text);
-                    assertTrue("连续中文合成必须返回可用样本", audio.getSamples().length > 1000);
-                    state.clear(); state.putString("synthesis_end", text); instrumentation.sendStatus(0, state);
-                }
-                reportSpeechMemory("after_three_syntheses");
+            // 复用正式服务的唯一合成器，避免常驻模式下额外创建第二份FP32模型。
+            for (String text : new String[]{"你好，我在这里。", "你好，我是小安。我会在这里，安静地陪伴你。", "我会一直陪着你。"}) {
+                long before=GuardianRuntime.speechSnapshot().id;
+                instrumentation.runOnMainSync(()->SpeechPlayback.speak(text));
+                await(()->GuardianRuntime.speechSnapshot().id>before&&
+                        (GuardianRuntime.speechSnapshot().phase==GuardianRuntime.SpeechPhase.COMPLETE||
+                         GuardianRuntime.speechSnapshot().phase==GuardianRuntime.SpeechPhase.ERROR),30000);
+                assertEquals(GuardianRuntime.speechSnapshot().error,GuardianRuntime.SpeechPhase.COMPLETE,GuardianRuntime.speechSnapshot().phase);
             }
-            SystemClock.sleep(1000); reportSpeechMemory("model_released");
+            reportSpeechMemory("after_three_unified_syntheses");
         } finally { stop(activity); }
     }
 

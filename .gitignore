@@ -54,6 +54,7 @@ local.properties
 !anlan/src/androidTest/assets/dialogue-test/*.pcm
 
 # Evaluation and local run logs
+/evaluation/
 /evaluation/*.log
 /evaluation/*.png
 /evaluation/runtime-*/

@@ -11,7 +11,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
 
-/** 仅在关怀存储线程调用。与既有事件表共用数据库，回复原文默认不保存。 */
+/** 仅在关怀存储线程调用。与既有事件表共用数据库，关怀记录和回复最多保留3天。 */
 final class CareStore implements AutoCloseable {
     private final EventStore helper;
     private final CareSettings settings;
@@ -53,7 +53,7 @@ final class CareStore implements AutoCloseable {
         return result.toString();
     }
     Care.Result finish(Care.Result result) throws Exception {
-        boolean stored = settings.saveReplies() && !result.replyText.isEmpty();
+        boolean stored = !result.replyText.isEmpty();
         JSONArray segments = new JSONArray();
         if (stored) for (VoiceUnderstandingResult value : result.segments) {
             segments.put(new JSONObject().put("text", value.text).put("emotion", value.emotion).put("language", value.language)
@@ -98,7 +98,7 @@ final class CareStore implements AutoCloseable {
         db.beginTransaction();
         try {
             ContentValues hidden = new ContentValues(); hidden.put("turns","[]");
-            db.update("conversations", hidden, settings.saveReplies() ? "completed<?" : "1=1", settings.saveReplies() ? new String[]{Long.toString(now-settings.repliesDays*86400000L)} : null);
+            db.update("conversations", hidden, "completed<?", new String[]{Long.toString(now-settings.repliesDays*86400000L)});
             db.delete("conversations","completed<?",new String[]{Long.toString(now-settings.recordsDays*86400000L)});
             String records = "SELECT id FROM (SELECT id,completed FROM care_records WHERE status<>'' UNION ALL SELECT id,completed FROM conversations) ORDER BY completed DESC,id DESC LIMIT " + settings.recordsMax;
             db.delete("care_records","status<>'' AND id NOT IN ("+records+")",null);
@@ -109,11 +109,10 @@ final class CareStore implements AutoCloseable {
             db.update("care_records",noReply,"reply<>'' AND id NOT IN ("+replies+")",null);
             db.delete("care_records", "status<>'' AND (completed<? OR id NOT IN (SELECT id FROM care_records WHERE status<>'' ORDER BY completed DESC,id DESC LIMIT ?))",
                     new String[]{Long.toString(now - settings.recordsDays * 86400000L), Integer.toString(settings.recordsMax)});
-            String where = settings.saveReplies()
-                    ? "reply<>'' AND (completed<? OR id NOT IN (SELECT id FROM care_records WHERE reply<>'' ORDER BY completed DESC,id DESC LIMIT ?))" : "reply<>''";
+            String where = "reply<>'' AND (completed<? OR id NOT IN (SELECT id FROM care_records WHERE reply<>'' ORDER BY completed DESC,id DESC LIMIT ?))";
             ContentValues values = new ContentValues(); values.put("reply", ""); values.put("segments", "[]");
-            db.update("care_records", values, where, settings.saveReplies()
-                    ? new String[]{Long.toString(now - settings.repliesDays * 86400000L), Integer.toString(settings.repliesMax)} : null);
+            db.update("care_records", values, where,
+                    new String[]{Long.toString(now - settings.repliesDays * 86400000L), Integer.toString(settings.repliesMax)});
             // 预算包含回复与元数据；旧终态先清理，活动关怀始终保留。
             long bytes = logicalBytes(db);
             if (bytes + 16384 > settings.storageBytes) {

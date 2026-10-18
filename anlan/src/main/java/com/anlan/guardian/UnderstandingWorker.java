@@ -40,6 +40,7 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
     private final Runnable dispatchState = this::dispatchState;
     private final Thread vadThread;
     private volatile boolean closed, continuous, suppressed, memoryPaused, voice, loaded;
+    private volatile boolean keepModel;
     private volatile long until, epoch, lastNativeUse;
     private volatile long resourceEpoch;
     private volatile int dropped;
@@ -50,13 +51,14 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
     private volatile InteractionPorts.SpeechInput.Result textListener;
     private volatile boolean explicitWindow;
     private int pendingSegments;
-    private boolean delivered, endpointReady;
+    private boolean delivered, endpointReady, idleNotified;
     private volatile SherpaVoiceUnderstanding.Settings settings;
     // 只在 MODEL 队列访问。
     private SherpaVoiceUnderstanding recognizer;
 
     UnderstandingWorker(Context context, boolean companion, Consumer<InteractionPorts.UnderstandingState> listener) {
         app = context.getApplicationContext(); this.listener = listener; continuous = companion;
+        keepModel = PerformanceSettings.highPerformance(app);
         modelIdleMs = ResourceBudget.read(app).modelIdleMs;
         vadThread = new Thread(this::vadLoop, "anlan-voice-vad"); vadThread.start();
     }
@@ -69,6 +71,11 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
         }
         if (previous != null) main.post(() -> previous.onError("倾听模式已切换"));
         emit(enabled ? "陪伴倾听已开启" : "等待唤醒");
+        if (enabled && keepModel) prewarm();
+    }
+    void performanceModeChanged() {
+        keepModel = PerformanceSettings.highPerformance(app);
+        if (keepModel && continuous && !memoryPaused) prewarm();
     }
     void openWindow() {
         synchronized (control) { memoryPaused = false; until = SystemClock.elapsedRealtime() + silenceMs(); }
@@ -122,7 +129,20 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
     }
     private long silenceMs() { return settings == null ? 4000 : settings.sessionSilenceMs; }
     private boolean enabled(long now) { return !closed && !suppressed && !memoryPaused && (continuous || now < until); }
-    private void invalidate() { epoch++; audio.clear(); segments.clear(); voice = false; inputLevel = 0; latest = null; pendingSegments = 0; delivered = false; endpointReady = false; }
+    private void invalidate() { epoch++; audio.clear(); segments.clear(); voice = false; inputLevel = 0; latest = null; pendingSegments = 0; delivered = false; endpointReady = false; idleNotified = true; }
+    boolean suppressIfIdle() {
+        synchronized (control) {
+            if (closed || memoryPaused || voice || pendingSegments != 0) return false;
+            suppressed = true; until = 0; invalidate();
+        }
+        emit("播报期间暂停倾听"); return true;
+    }
+    void retainInput(long timeoutMs) {
+        synchronized (control) {
+            if (!closed && !suppressed && !memoryPaused && textListener != null)
+                until = SystemClock.elapsedRealtime() + Math.min(120000, Math.max(1, timeoutMs));
+        }
+    }
 
     void acceptPcm(short[] pcm, int count, int sampleRate) {
         if (!enabled(SystemClock.elapsedRealtime())) return;
@@ -142,6 +162,7 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
         try {
             settings = new SherpaVoiceUnderstanding.Settings(app);
             try (SherpaVoiceUnderstanding.VoiceDetector detector = new SherpaVoiceUnderstanding.VoiceDetector(app, settings)) {
+                if (keepModel && continuous) prewarm();
                 float[] frame = new float[512]; int filled = 0; long seenEpoch = -1, heartbeat = 0;
                 boolean wasEnabled = false;
                 emit(continuous ? "陪伴倾听已开启" : "等待唤醒");
@@ -164,9 +185,9 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
                         }
                     }
                     wasEnabled = active;
-                    if (loaded && now - lastNativeUse >= Math.min(settings.idleReleaseMs, modelIdleMs) && !draining.get() && reclaiming.compareAndSet(false,true)) {
+                    if (!keepModel && loaded && now - lastNativeUse >= Math.min(settings.idleReleaseMs, modelIdleMs) && !draining.get() && reclaiming.compareAndSet(false,true)) {
                         MODEL.execute(()->{
-                            try{if(!draining.get()&&!warming.get()&&SystemClock.elapsedRealtime()-lastNativeUse>=Math.min(settings.idleReleaseMs,modelIdleMs))releaseModel();}
+                            try{if(!keepModel&&!draining.get()&&!warming.get()&&SystemClock.elapsedRealtime()-lastNativeUse>=Math.min(settings.idleReleaseMs,modelIdleMs))releaseModel();}
                             finally{reclaiming.set(false);}
                         });
                     }
@@ -192,6 +213,7 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
                         synchronized (control) {
                             if (chunk.epoch != epoch || !enabled(now)) break;
                             boolean speaking = detector.speaking();
+                            if (speaking) idleNotified = false;
                             endpointReady = false;
                             if (speaking && !continuous && !explicitWindow) until = now + silenceMs();
                             if (speaking != voice || speaking && now - heartbeat >= 400) {
@@ -226,6 +248,7 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
     private void enqueue(float[] samples, long session) {
         synchronized (control) {
             if (closed || suppressed || session != epoch) return;
+            idleNotified = false;
             if (!segments.offer(new Chunk(samples, session))) {
                 dropped++;
                 if (continuous && textListener == null) {
@@ -324,15 +347,16 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
     }
     private void utteranceEnd(long session) {
         synchronized (control) {
-            if (closed || session != epoch || voice || pendingSegments != 0 || !delivered) return;
+            if (closed || session != epoch || voice || pendingSegments != 0 || !delivered && idleNotified) return;
         }
         main.post(() -> {
             InteractionPorts.SpeechInput.Result callback;
+            boolean hadText;
             synchronized (control) {
-                if (closed || session != epoch || voice || !endpointReady || pendingSegments != 0 || !delivered) return;
-                delivered = false; callback = textListener;
+                if (closed || session != epoch || voice || !endpointReady || pendingSegments != 0 || !delivered && idleNotified) return;
+                hadText = delivered; delivered = false; idleNotified = true; callback = textListener;
             }
-            if (callback != null) callback.onUtteranceEnd();
+            if (callback != null) { if (hadText) callback.onUtteranceEnd(); else callback.onAnalysisIdle(); }
         });
     }
     private void releaseModel() {

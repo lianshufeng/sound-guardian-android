@@ -200,6 +200,65 @@ public final class GuardianDeviceTest {
         }
     }
 
+    @Test public void soundStrengthDisplaysLouderPcmWithoutModelResults() throws Exception {
+        MainActivity activity = launch();
+        boolean previous = activity.isNameVisible("show_sound_level");
+        java.lang.reflect.Method render = MainActivity.class.getDeclaredMethod("render"); render.setAccessible(true);
+        try {
+            instrumentation.runOnMainSync(() -> {
+                long token = GuardianRuntime.begin();
+                android.widget.TextView meter = activity.findViewById(R.id.sound_level);
+                activity.setNameVisible("show_sound_level", true);
+                for (short amplitude : new short[]{0, 32767}) {
+                    GuardianRuntime.publishSoundLevel(token, new short[]{amplitude}, 1, SystemClock.elapsedRealtime());
+                    try { render.invoke(activity); } catch (Exception error) { throw new IllegalStateException(error); }
+                    assertEquals(amplitude == 0 ? "声音强度 0" : "声音强度 100", meter.getText().toString());
+                    assertEquals(android.view.View.VISIBLE, meter.getVisibility());
+                }
+                activity.setNameVisible("show_sound_level", false);
+                assertEquals(android.view.View.GONE, meter.getVisibility());
+            });
+        } finally {
+            instrumentation.runOnMainSync(() -> { activity.setNameVisible("show_sound_level", previous); activity.finish(); });
+            app.stopService(new Intent(app, GuardianService.class));
+        }
+    }
+
+    @Test public void careCategorySelectionPersistsAndLeavesOtherSwitchesUnchanged() throws Exception {
+        MainActivity activity = launch();
+        android.content.SharedPreferences preferences = app.getSharedPreferences("care", Context.MODE_PRIVATE);
+        String[] groups = {"group_body", "group_emotion", "group_companion", "group_family", "group_safety", "group_weather", "group_schedule"};
+        java.util.Map<String, ?> previous = preferences.getAll();
+        try {
+            preferences.edit().putBoolean("enabled", false).putBoolean("quiet_enabled", true).putBoolean("bedtime_enabled", false).commit();
+            instrumentation.runOnMainSync(() -> {
+                new CarePanel(activity, () -> { }).show();
+                android.view.View root = activity.getWindow().getDecorView();
+                findText(root, "全选").performClick();
+                for (String key : groups) assertTrue(preferences.getBoolean(key, false));
+                findText(root, "反选").performClick();
+                for (String key : groups) assertFalse(preferences.getBoolean(key, true));
+                ((android.widget.CheckBox)findText(root, "身体声音关怀")).setChecked(true);
+                findText(root, "反选").performClick();
+                assertFalse(preferences.getBoolean(groups[0], true));
+                for (int i = 1; i < groups.length; i++) assertTrue(preferences.getBoolean(groups[i], false));
+                new CarePanel(activity, () -> { }).show();
+                assertFalse(((android.widget.CheckBox)findText(root, "身体声音关怀")).isChecked());
+                assertTrue(((android.widget.CheckBox)findText(root, "情绪陪伴关怀")).isChecked());
+                assertFalse(preferences.getBoolean("enabled", true));
+                assertTrue(preferences.getBoolean("quiet_enabled", false));
+                assertFalse(preferences.getBoolean("bedtime_enabled", true));
+            });
+        } finally {
+            android.content.SharedPreferences.Editor editor = preferences.edit();
+            java.util.List<String> keys = new java.util.ArrayList<>(java.util.Arrays.asList(groups));
+            keys.addAll(java.util.Arrays.asList("enabled", "quiet_enabled", "bedtime_enabled"));
+            for (String key : keys) { if (previous.containsKey(key)) editor.putBoolean(key, (Boolean)previous.get(key)); else editor.remove(key); }
+            editor.commit(); app.stopService(new Intent(app, GuardianService.class));
+            instrumentation.runOnMainSync(activity::finish);
+        }
+    }
+
     @Test public void drawerReturnsToParentWithoutOpeningDialogs() throws Exception {
         MainActivity activity = launch();
         try {
@@ -246,17 +305,18 @@ public final class GuardianDeviceTest {
 
     @Test public void careSettingsNavigateAndPersistExplicitChoices() throws Exception {
         android.content.SharedPreferences prefs = app.getSharedPreferences("care", 0);
-        String[] keys = {"enabled", "group_body", "save_replies"};
+        String[] keys = {"enabled", "group_body"};
         java.util.Map<String, Boolean> saved = new java.util.HashMap<>();
         for (String key : keys) if (prefs.contains(key)) saved.put(key, prefs.getBoolean(key, false));
-        prefs.edit().putBoolean("enabled", false).putBoolean("group_body", false).putBoolean("save_replies", false).commit();
+        prefs.edit().putBoolean("enabled", false).putBoolean("group_body", false).commit();
         MainActivity activity = launch();
         try {
             instrumentation.runOnMainSync(() -> {
                 android.view.ViewGroup root = activity.findViewById(android.R.id.content);
                 activity.findViewById(R.id.clock).performClick();
                 findText(root, "设置").performClick(); findText(root, "主动关怀").performClick();
-                String[] labels = {"允许主动关怀", "身体声音关怀", "保存关怀及对话文字（最多七天）"};
+                assertNotNull(findText(root, "关怀记录及对话文字自动保存，最多保留3天。"));
+                String[] labels = {"允许主动关怀", "身体声音关怀"};
                 for (String label : labels) {
                     android.widget.CheckBox box = (android.widget.CheckBox)findText(root, label);
                     assertNotNull(label, box); assertFalse(box.isChecked()); box.performClick(); assertTrue(box.isChecked());
@@ -348,6 +408,16 @@ public final class GuardianDeviceTest {
                         SystemClock.elapsedRealtime(), null, 0, .85f));
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
                 assertEquals("正在听你说话", hint.getText().toString());
+                GuardianRuntime.publishConversation("ui-continuation", "CONTINUING_VOICE");
+                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
+                assertEquals("正在听你说话", hint.getText().toString());
+                GuardianRuntime.publishConversation("ui-continuation", "CONTINUING");
+                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
+                assertEquals("请继续说", hint.getText().toString());
+                GuardianRuntime.publishInput("MONITORING"); GuardianRuntime.publishConversation("ui-continuation", "THINKING");
+                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
+                assertEquals("想一想", hint.getText().toString());
+                GuardianRuntime.publishInput("LISTENING"); GuardianRuntime.publishConversation("", "IDLE");
             });
             SystemClock.sleep(300);
             Bitmap screenshot = instrumentation.getUiAutomation().takeScreenshot();

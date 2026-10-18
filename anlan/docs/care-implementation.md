@@ -2,7 +2,7 @@
 
 日期：2026-10-17。本文记录已落地代码和实际验证；[开发计划](care-development-plan.md)中的 72 个候选场景不等于全部已上线。
 
-2026-10-18 增量：ASK 首轮结果仍立即返回原有 Care.Result；开启并配置“AI模型”后，原问题和回复交给 ConversationCoordinator 衔接后续对话，使用独立 sessionId/turnId 关联 careId。`Conversation.query/observe/cancel` 可按 sessionId 或 careId 调用，不依赖未来通信协议。默认查询只持久保留元数据；保存关怀及对话文字须另外开启，关闭后清除。输入统一经 InputSessionController，准备和提示音期间不提前显示可说话，首轮无回复时限在实际就绪后开始。实现及本次验收见 [AI 对话](ai-dialogue-development-plan.md)；下文历史有限话术限制属于接入前版本，未开启 AI 时仍适用。
+2026-10-18 增量：ASK 首轮结果仍立即返回原有 Care.Result；开启并配置“AI模型”后，原问题和回复交给 ConversationCoordinator 衔接后续对话，使用独立 sessionId/turnId 关联 careId。`Conversation.query/observe/cancel` 可按 sessionId 或 careId 调用，不依赖未来通信协议。关怀及对话记录、正文自动保存，最多保留3天，不再提供保存开关。输入统一经 InputSessionController，准备和提示音期间不提前显示可说话，首轮无回复时限在实际就绪后开始。实现及本次验收见 [AI 对话](ai-dialogue-development-plan.md)；下文历史有限话术限制属于接入前版本，未开启 AI 时仍适用。
 
 ## 统一调用方法
 
@@ -32,7 +32,7 @@ Care.submit(request, new Care.Listener() {
 - NOTICE 使用 `replyTimeoutMs=0`，只播报，真实播放完成后返回 COMPLETED。
 - ASK 在真实播放完成及尾音期结束后临时开启自己的倾听窗口，收到完整话轮后返回 REPLIED；没有讲话为 TIMEOUT，输入故障为 FAILED。文字来自多片段时保序拼接，各片段情绪分别保留。
 - 底部共用白蓝渐变语音波浪：等待时呼吸，实际倾听且检测到讲话时随短时音量起伏；准备和播放期间仅低幅流动。不再显示结束按钮，返回键结束当前关怀，菜单内先返回菜单；回复时限及NOTICE/ASK语义不变。本轮波浪验收与真机限制见[AI对话验收记录](ai-dialogue-development-plan.md)。
-- 2026-10-18 ASK播放完成后立即转交共享InputSessionController准备输入，协调器不再额外等待500毫秒；提示音和最终尾音仍由同一个输入控制器负责，实际就绪才开始原请求的replyTimeoutMs。Care ASK不采用唤醒首轮的快速输入分支。Care一轮结果、开关、限频及安全资格不变；未来远程仍只能提交同一Care请求，不新增远程通道。本次性能与回归边界见[性能验收](interaction-performance-acceptance.md)。
+- 2026-10-18 ASK播放完成后立即转交共享InputSessionController准备输入，协调器不再额外等待500毫秒；提示音和最终尾音仍由同一个输入控制器负责，实际就绪才开始原请求的replyTimeoutMs。Care ASK不采用唤醒首轮的快速输入分支。Care一轮结果、开关、限频及安全资格不变；未来远程仍只能提交同一Care请求，不新增远程通道。本次性能与回归边界见[性能验收](../../evaluation/interaction-performance-acceptance.md)。
 - 已移除`care/policy.json`不再使用的`tail_ms`及读取校验；共享输入尾音只维护于`dialogue.json`，避免修改关怀旧参数却没有效果。
 - 回调在主线程执行，应快速处理；回调异常被隔离。未绑定守护服务时 submit 抛出 IllegalStateException，请调用方等待服务就绪再提交。
 - `Care.cancel(careId)` 取消所属请求；`Care.respond(careId, text)` 接收明确屏幕反馈，结果标记 SCREEN，不冒充语音结果；`Care.query(careId, callback)` 查询持久终态。
@@ -44,7 +44,7 @@ Care.submit(request, new Care.Listener() {
 
 应用内入口“预览 → 场景”汇总当前支持的场景及基础实现边界，含 S73 响指互动、日常表情和关怀回复控制；展示内容维护在 `anlan/src/main/assets/scenario_catalog.json`。它是只读说明目录，不将候选清单中的待开发功能列为已支持，也不自动发起演示或播报。
 
-入口为“设置 → 主动关怀”。总开关和分类默认关闭；打开需要的分类后才自动发起语音。原有触摸、共情表情及守护事件展示继续使用现有 BehaviorEngine。
+入口为“设置 → 主动关怀”。总开关和分类默认关闭；打开需要的分类后才自动发起语音。“关怀类型”的“全选 / 反选”只批量修改七个分类，立即保存并刷新；不改变总开关、安静时段、就寝提醒。原有触摸、共情表情及守护事件展示继续使用现有 BehaviorEngine。
 
 | 场景 | 当前实现 |
 |---|---|
@@ -66,8 +66,8 @@ Care.submit(request, new Care.Listener() {
 ## 存储与生命周期
 
 - SQLite events.db 增量升级到版本 3；保留 events 表，新增 care_records、care_schedules，不整库重建。
-- 关怀终态最多 1,000 条且不超过 30 天；可选原文最多 300 条且不超过 7 天；计划最多 100 项。写入、查询、服务恢复及服务运行期间每六小时清理；不保存录音。
-- 默认只保存结果元数据和有限意图，原文和片段情绪不落库。开启“保存关怀回复”后才保存本次答复和对应片段；关闭会清除原文。
+- 关怀终态最多 1,000 条且不超过3天；原文最多300条且不超过3天；计划最多 100 项。写入、查询、服务恢复及服务运行期间每六小时清理；不保存录音。
+- 关怀回复及对应片段、对话正文自动保存，最多保留3天；原`save_replies`偏好不再生效。全天倾听转写和录音不保存。
 - 关怀逻辑记录预算 16 MiB，不是 SQLite 文件大小承诺；已有事件和数据库页/索引另有开销。磁盘失败明确报告，不停止已有 YAMNet 守护。
 - 服务重启把未完成关怀标记取消，不自动重新播放。回复窗口、输入回调、播报和超时携带所属会话，旧结果不得进入新 careId。
 - 定时提醒仅保证守护服务运行期间检查；不承诺进程终止、关机或厂商冻结时准点。错过的每日提醒不集中补播。
@@ -84,9 +84,9 @@ Care.submit(request, new Care.Listener() {
 
 2026-10-18 [S73：连续响指开心回应](finger-snap-interaction.md) 已支持自然连续响指片段确认，并保留 15 秒两次独立命中的方式；回应为开心表情及统一 TTS，不等待回复。具体忙碌限制及本次验证范围见该文，历史计数与视觉测试不代表新增连续片段或语音已验收。
 
-2026-10-18 补充 [Android 9 / API 28 兼容性验收](android9-compatibility.md)：安澜 69 项及原 App 1 项均取得通过记录；首次定位权限弹窗导致的 6 项失败已完成复验，详见报告。
+2026-10-18 补充 [Android 9 / API 28 兼容性验收](../../evaluation/android9-compatibility.md)：安澜 69 项及原 App 1 项均取得通过记录；首次定位权限弹窗导致的 6 项失败已完成复验，详见报告。
 
-本轮完整模拟器验收、逐项场景状态及持续运行数据见 [主动关怀模拟器验收](care-emulator-acceptance.md)；下文为上一轮实施验证记录，测试数量与 APK 大小以新报告为准。
+本轮完整模拟器验收、逐项场景状态及持续运行数据见 [主动关怀模拟器验收](../../evaluation/care-emulator-acceptance.md)；下文为上一轮实施验证记录，测试数量与 APK 大小以新报告为准。
 
 已执行依赖准备、四项共享资产任务、两款 Debug 构建及安澜 lint，均通过。单元测试 core 12 项、安澜 58 项通过；原 App 的单元测试任务为 NO-SOURCE。
 

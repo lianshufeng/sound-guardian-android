@@ -46,7 +46,7 @@ public final class CareDeviceTest {
         String admission = "";
         UnderstandingWorker voiceWorker;
         Harness() {
-            app.getSharedPreferences("care", 0).edit().putBoolean("enabled", true).putBoolean("save_replies", false).commit();
+            app.getSharedPreferences("care", 0).edit().putBoolean("enabled", true).commit();
             instrumentation.runOnMainSync(() -> {
                 lease = SpeechPlayback.attach(value -> { speech = value; plays++; value.observer.onStart(); started.countDown(); });
                 coordinator = new CareCoordinator(app, this);
@@ -101,7 +101,7 @@ public final class CareDeviceTest {
             assertTrue(done.await(5, TimeUnit.SECONDS));
             assertEquals(request.careId, result.get().careId); assertEquals(Care.Status.REPLIED, result.get().status);
             assertEquals("我没事，谢谢。", result.get().replyText); assertEquals("HAPPY", result.get().segments.get(1).emotion);
-            assertFalse(result.get().replyStored);
+            assertTrue(result.get().replyStored);
             try (CareStore store = new CareStore(app, new CareSettings(app))) {
                 Care.Result saved = store.get(request.careId); assertEquals("", saved.replyText); assertTrue(saved.segments.isEmpty());
             }
@@ -131,17 +131,19 @@ public final class CareDeviceTest {
             instrumentation.runOnMainSync(() -> harness.speech.observer.onComplete()); assertTrue(done.await(5, TimeUnit.SECONDS));
         }
     }
-    @Test public void recordsAreBoundedAndTurningOffReplyStorageErasesText() throws Exception {
+    @Test public void recordsAreBoundedAndAutomaticallyExpireAfterThreeDays() throws Exception {
         CareSettings settings = new CareSettings(app);
-        settings.preferences.edit().putBoolean("save_replies", true).commit();
+        settings.preferences.edit().remove("save_replies").commit();
         long now = System.currentTimeMillis();
         try (CareStore store = new CareStore(app, settings)) {
             store.recover(now); InteractionPorts.CareRequest request = request(true); assertNull(store.claim(request, now));
             store.finish(new Care.Result(request.careId, request.scenarioId, request.eventId, Care.Status.REPLIED, "VOICE", "我没事", "OK", now,
                     Collections.singletonList(new VoiceUnderstandingResult(1, 0, "我没事", "NEUTRAL", "zh", "Speech", 1000, 20)), false));
             assertTrue(store.get(request.careId).replyStored);
-            settings.preferences.edit().putBoolean("save_replies", false).commit(); store.clean(now);
-            assertEquals("", store.get(request.careId).replyText);
+            settings.preferences.edit().putBoolean("save_replies", false).commit(); store.clean(now + 3 * 86400000L - 1);
+            assertEquals("我没事", store.get(request.careId).replyText);
+            assertEquals(3, settings.recordsDays); assertEquals(3, settings.repliesDays);
+            store.clean(now + 3 * 86400000L + 1); assertNull(store.get(request.careId));
             try (EventStore helper = new EventStore(app)) {
                 SQLiteDatabase db = helper.getWritableDatabase(); db.beginTransaction();
                 try {
@@ -292,7 +294,7 @@ public final class CareDeviceTest {
         }
     }
     @Test public void ttlCleanupKeepsActiveRecordsAndRemovesExpiredReplyOnly() throws Exception {
-        CareSettings settings = new CareSettings(app); settings.preferences.edit().putBoolean("save_replies", true).commit();
+        CareSettings settings = new CareSettings(app); settings.preferences.edit().remove("save_replies").commit();
         long now = System.currentTimeMillis();
         try (CareStore store = new CareStore(app, settings); EventStore helper = new EventStore(app)) {
             SQLiteDatabase db = helper.getWritableDatabase();

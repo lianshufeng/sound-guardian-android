@@ -63,6 +63,14 @@ public final class SpeechTextBufferTest {
         assertTrue(input.exhausted()); assertEquals(0, input.pendingChars()); assertNull(input.poll(1000));
         try { input.append("旧内容", 1); fail(); } catch (IllegalStateException expected) { }
     }
+    @Test public void localSynthesisDelayDoesNotConsumeUpstreamIdleTimeout() {
+        SpeechTextBuffer input = buffer();input.append("第一句。", 0);
+        assertEquals("第一句。", input.poll(0));
+        input.consumerReady(35000);
+        assertFalse(input.inputTimedOut(64999));
+        input.append("", 64999);assertTrue(input.inputTimedOut(65000));
+        input.end();assertFalse(input.inputTimedOut(65000));
+    }
     @Test public void invalidCapacityIsRejected() {
         try { new SpeechTextBuffer(12, 40, 8, 700, 30000, 0); fail(); }
         catch (IllegalArgumentException expected) { }

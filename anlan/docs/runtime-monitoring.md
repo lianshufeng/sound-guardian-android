@@ -14,6 +14,6 @@ pwsh -NoProfile -File tools/monitor-anlan.ps1 -Device 设备序列号 -OutputDir
 
 温度应使用`Current temperatures from HAL`段，区分CPU、GPU、机身和电池；缓存温度可能过期。USB供电、充电或满电条件下不能根据电量、charge counter直接推算纯电池续航。无法读取的内存压力或电流字段应标为缺失，不能填零。
 
-本次观察窗口为2026-10-18 14:56:10—15:26:10（Asia/Shanghai），设备vivo V2505A / Android16 / ARM64。正式数据位于`evaluation/runtime-20261018-1456/`，`runtime-20261018-1458/`是初始化权限诊断失败的已停止目录，不参与结果。31次采样已完整结束，0次失败；结论和版本限制见[完整观察报告](runtime-environment-20261018-report.md)，不能将该环境音结果当作最新工作区APK或连续语音交互验收。
+本次观察窗口为2026-10-18 14:56:10—15:26:10（Asia/Shanghai），设备vivo V2505A / Android16 / ARM64。正式数据位于`evaluation/runtime-20261018-1456/`，`runtime-20261018-1458/`是初始化权限诊断失败的已停止目录，不参与结果。31次采样已完整结束，0次失败；结论和版本限制见[完整观察报告](../../evaluation/runtime-environment-20261018-report.md)，不能将该环境音结果当作最新工作区APK或连续语音交互验收。
 
 每分钟快照无法捕获所有瞬时峰值，系统日志也可能轮转；环境音守护观察不等于连续唤醒、动态TTS、真实网络多轮、低端设备或长期稳定性验收。正式报告需披露有效样本数、丢样、进程变化、CPU/内存趋势、温升、异常证据和剩余限制。报告回访由本聊天自动化触发，采样由独立隐藏进程执行；宿主休眠、ADB断开或应用关闭均可能影响完整性。

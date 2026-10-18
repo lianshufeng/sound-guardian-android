@@ -11,37 +11,59 @@ import java.util.Locale;
 
 /** 关怀设置与明确的屏幕反馈；不保存 Activity 到服务。 */
 final class CarePanel {
+    private static final String[] GROUP_KEYS = {"group_body", "group_emotion", "group_companion", "group_family", "group_safety", "group_weather", "group_schedule"};
     private final MainActivity activity;
     private final Runnable back;
     private final CareSettings settings;
     CarePanel(MainActivity activity, Runnable back) { this.activity = activity; this.back = back; settings = new CareSettings(activity); }
     void show() {
         LinearLayout body = column();
-        note(body, "按你的选择主动提醒或询问；需要回复时会临时倾听。默认不保存录音和回复文字。");
+        note(body, "按你的选择主动提醒或询问；需要回复时会临时倾听。不保存录音。");
         toggle(body, "允许主动关怀", "enabled", false);
-        toggle(body, "身体声音关怀", "group_body", false);
-        toggle(body, "情绪陪伴关怀", "group_emotion", false);
-        toggle(body, "简单陪伴回应", "group_companion", false);
-        toggle(body, "家庭声音提醒（含婴儿哭声）", "group_family", false);
-        toggle(body, "警报与异常声音语音提示", "group_safety", false);
-        toggle(body, "天气与出行关怀", "group_weather", false);
-        toggle(body, "作息提醒", "group_schedule", false);
+        sectionDivider(body);
+        note(body, "关怀类型");
+        LinearLayout selection = new LinearLayout(activity);
+        for (String label : new String[]{"全选", "反选"}) {
+            android.widget.Button button = new android.widget.Button(activity); button.setText(label);
+            button.setOnClickListener(view -> selectGroups(label.equals("反选")));
+            selection.addView(button, new LinearLayout.LayoutParams(0, dp(48), 1));
+        }
+        body.addView(selection);
+        String[] groupNames = {"身体声音关怀", "情绪陪伴关怀", "简单陪伴回应", "家庭声音提醒（含婴儿哭声）", "警报与异常声音语音提示", "天气与出行关怀", "作息提醒"};
+        for (int i = 0; i < GROUP_KEYS.length; i++) toggle(body, groupNames[i], GROUP_KEYS[i], false);
+        sectionDivider(body);
         action(body, "我的定时提醒", this::schedules);
         toggle(body, "启用就寝时间提醒", "bedtime_enabled", false);
         time(body, "就寝时间", "bedtime", 22 * 60);
+        sectionDivider(body);
         toggle(body, "安静时段暂停普通关怀", "quiet_enabled", true);
         time(body, "安静时段开始", "quiet_start", 22 * 60);
         time(body, "安静时段结束", "quiet_end", 7 * 60);
-        toggle(body, "保存关怀及对话文字（最多七天）", "save_replies", false);
+        sectionDivider(body);
+        note(body, "关怀记录及对话文字自动保存，最多保留3天。");
         action(body, "关怀记录", this::history);
+        sectionDivider(body);
         action(body, "停止当前关怀", () -> { try { Care.cancel(Care.activeId()); } catch (IllegalStateException ignored) { } });
         if (Care.phase().equals("LISTENING")) for (String value : new String[]{"我没事", "需要帮助", "不用", "稍后", "是电视"})
             action(body, value, () -> { try { Care.respond(Care.activeId(), value); show(); } catch (IllegalStateException ignored) { } });
         if (BuildConfig.DEBUG) {
+            sectionDivider(body);
             action(body, "试用：保暖提醒", () -> demo(false));
             action(body, "试用：关怀询问", () -> demo(true));
         }
         page("主动关怀", body, back);
+    }
+    private void sectionDivider(LinearLayout body) {
+        android.view.View divider = new android.view.View(activity); divider.setBackgroundColor(0xFF2E4148);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(1));
+        params.setMargins(0, dp(8), 0, dp(8)); body.addView(divider, params);
+    }
+    private void selectGroups(boolean invert) {
+        android.content.SharedPreferences.Editor editor = settings.preferences.edit();
+        for (String key : GROUP_KEYS) editor.putBoolean(key, !invert || !settings.preferences.getBoolean(key, false));
+        editor.apply();
+        try { activity.startForegroundService(new Intent(activity, GuardianService.class)); } catch (RuntimeException ignored) { }
+        show();
     }
     private void demo(boolean ask) {
         try {
@@ -93,9 +115,6 @@ final class CarePanel {
         box.setOnCheckedChangeListener((view, checked) -> {
             settings.preferences.edit().putBoolean(key, checked).apply();
             try { activity.startForegroundService(new Intent(activity, GuardianService.class)); } catch (RuntimeException ignored) { }
-            if (key.equals("save_replies") && !checked) new Thread(() -> {
-                try (CareStore store = new CareStore(activity.getApplicationContext(), settings)) { store.clean(System.currentTimeMillis()); }
-            }, "anlan-care-clean").start();
         });
         body.addView(box, new LinearLayout.LayoutParams(-1, dp(54)));
     }

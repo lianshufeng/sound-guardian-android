@@ -6,6 +6,25 @@ import java.util.List;
 
 /** 只保存不可变数据，不持有 Activity。用于旋转、返回主页后的状态恢复。 */
 final class GuardianRuntime {
+    private static final class SoundLevel {
+        final short[] samples;
+        final long at;
+        SoundLevel(short[] samples, long at) { this.samples = samples; this.at = at; }
+    }
+    private static volatile SoundLevel soundLevel;
+    // 采集线程只分发最新一块PCM；页面计算相对强度，不等待模型推理。
+    static synchronized void publishSoundLevel(long token, short[] samples, int count, long at) {
+        if (token != generation || count <= 0 || count > samples.length) return;
+        soundLevel = new SoundLevel(java.util.Arrays.copyOf(samples, count), at);
+    }
+    static int soundStrength(long now) {
+        SoundLevel level = soundLevel;
+        if (level == null || now < level.at || now - level.at > 500) return 0;
+        double energy = 0;
+        for (short sample : level.samples) { double value = sample / 32768.0; energy += value * value; }
+        double db = 20 * Math.log10(Math.max(1e-9, Math.sqrt(energy / level.samples.length)));
+        return (int)Math.round(Math.max(0, Math.min(100, (db + 60) / 60 * 100)));
+    }
     enum Status { STOPPED, STARTING, LISTENING, ERROR }
     static final class WakeSnapshot {
         final String status;
@@ -104,6 +123,7 @@ final class GuardianRuntime {
     private static volatile Snapshot latest = new Snapshot(Status.STOPPED,
             Collections.emptyList(), "", "", 0, -96, false);
     static synchronized long begin() {
+        soundLevel = null;
         generation++; wake = new WakeSnapshot("未启动", 0);
         understanding = new InteractionPorts.UnderstandingState("未启动", false, 0, null, 0);
         conversationId = ""; conversationState = "IDLE";
@@ -113,6 +133,7 @@ final class GuardianRuntime {
     }
     static synchronized boolean publish(long token, Snapshot snapshot) {
         if (token != generation) return false;
+        if (snapshot.status != Status.LISTENING) soundLevel = null;
         latest = snapshot; return true;
     }
     static Snapshot snapshot() { return latest; }

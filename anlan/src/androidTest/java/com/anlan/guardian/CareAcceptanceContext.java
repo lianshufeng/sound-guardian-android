@@ -15,6 +15,6 @@ final class CareAcceptanceContext extends ContextWrapper implements AutoCloseabl
     @Override public SQLiteDatabase openOrCreateDatabase(String name, int mode, SQLiteDatabase.CursorFactory factory, android.database.DatabaseErrorHandler handler) { return super.openOrCreateDatabase(prefix + name, mode, factory, handler); }
     @Override public void close() {
         super.deleteDatabase(prefix + "events.db");
-        for (String name : new String[]{"care", "weather", "ai_model"}) super.deleteSharedPreferences(prefix + name);
+        for (String name : new String[]{"care", "weather", "ai_model", "interaction"}) super.deleteSharedPreferences(prefix + name);
     }
 }

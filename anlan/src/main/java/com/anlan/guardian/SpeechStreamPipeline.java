@@ -75,6 +75,7 @@ final class SpeechStreamPipeline<T> {
                 while (running() && !ready.offer(new Segment<>(audio, segment), 100, TimeUnit.MILLISECONDS)) {
                     if (failure.get() != null) throw failure.get();
                 }
+                input.consumerReady(clock.getAsLong());
             }
         } catch (Exception error) {
             aborted = true;

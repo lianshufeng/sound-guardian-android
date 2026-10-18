@@ -10,14 +10,14 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** 仅存终态，有界正文与元数据；复用同一数据库和关怀隐私开关。 */
+/** 仅存终态，有界正文与元数据；复用同一数据库和关怀的3天保留期。 */
 final class ConversationStore implements AutoCloseable {
     private final EventStore helper;
     private final CareSettings settings;
     private final Context context;
     ConversationStore(Context context) { this.context=context; helper = new EventStore(context); settings = new CareSettings(context); }
     void save(Conversation.Result result) throws Exception {
-        boolean stored = settings.saveReplies();
+        boolean stored = !result.turns.isEmpty();
         JSONArray turns = new JSONArray();
         if (stored) for (Conversation.Turn turn : result.turns) {
             JSONArray segments = new JSONArray();
@@ -34,8 +34,8 @@ final class ConversationStore implements AutoCloseable {
         try {
             db.delete("conversations", "completed<? OR id NOT IN (SELECT id FROM conversations ORDER BY completed DESC,id DESC LIMIT ?)", new String[]{Long.toString(now - settings.recordsDays * 86400000L), Integer.toString(settings.recordsMax)});
             ContentValues empty = new ContentValues(); empty.put("turns", "[]");
-            db.update("conversations", empty, settings.saveReplies() ? "completed<? OR id NOT IN (SELECT id FROM conversations WHERE turns<>'[]' ORDER BY completed DESC,id DESC LIMIT ?)" : "1=1",
-                    settings.saveReplies() ? new String[]{Long.toString(now - settings.repliesDays * 86400000L), Integer.toString(settings.repliesMax)} : null);
+            db.update("conversations", empty, "completed<? OR id NOT IN (SELECT id FROM conversations WHERE turns<>'[]' ORDER BY completed DESC,id DESC LIMIT ?)",
+                    new String[]{Long.toString(now - settings.repliesDays * 86400000L), Integer.toString(settings.repliesMax)});
             while (bytes(db) > settings.storageBytes / 2) {
                 int deleted = db.delete("conversations", "id=(SELECT id FROM conversations ORDER BY completed,id LIMIT 1)", null);
                 if (deleted == 0) break;

@@ -43,5 +43,4 @@ final class CareSettings {
         } catch (Exception error) { throw new IllegalStateException("关怀配置读取失败", error); }
     }
     boolean enabled() { return preferences.getBoolean("enabled", false); }
-    boolean saveReplies() { return preferences.getBoolean("save_replies", false); }
 }

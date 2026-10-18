@@ -15,6 +15,24 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class SpeechStreamPipelineTest {
+    @Test public void slowLocalSynthesisStillPlaysBeforeWaitingForMoreInput() throws Exception {
+        SpeechTextBuffer input=new SpeechTextBuffer(1,40,512,700,30000,0);input.append("第一句。",0);
+        java.util.concurrent.atomic.AtomicLong clock=new java.util.concurrent.atomic.AtomicLong();
+        CountDownLatch waitingForInput=new CountDownLatch(1);AtomicInteger played=new AtomicInteger();
+        ExecutorService playback=Executors.newSingleThreadExecutor();
+        try{
+            new SpeechStreamPipeline<String>(input,()->true,InteractionPorts.SpeechRequest.Source.DIALOGUE,"").run(
+                    new SpeechStreamPipeline.Engine<String>(){
+                        public String synthesize(InteractionPorts.SpeechRequest segment){clock.addAndGet(35000);return segment.text;}
+                        public void play(String audio,InteractionPorts.SpeechRequest segment)throws Exception{
+                            if(!waitingForInput.await(2,TimeUnit.SECONDS))throw new IllegalStateException("未进入上游等待");
+                            played.incrementAndGet();input.end();
+                        }
+                        public void idle(){waitingForInput.countDown();}
+                    },playback,clock::get);
+            assertEquals(1,played.get());assertTrue(input.exhausted());
+        }finally{playback.shutdownNow();}
+    }
     @Test public void playbackFailureIsReportedOnceAndProducerDoesNotHang() throws Exception {
         SpeechTextBuffer input = new SpeechTextBuffer(1, 40, 512, 700, 30000, 0);
         input.append("第一句。第二句。第三句。", 0); input.end();

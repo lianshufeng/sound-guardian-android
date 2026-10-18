@@ -46,22 +46,43 @@ final class ControlPanel {
             final int index = i; box.setOnCheckedChangeListener((button, enabled) -> activity.setNameVisible(keys[index], enabled));
             body.addView(box, new LinearLayout.LayoutParams(-1, dp(62)));
         }
-        View divider = new View(activity); divider.setBackgroundColor(0xFF2E4148); body.addView(divider, new LinearLayout.LayoutParams(-1, dp(1)));
-        CheckBox companion = new CheckBox(activity); companion.setText("持续陪伴倾听"); companion.setTextSize(16); companion.setTextColor(0xFFD2E5DC);
+        sectionDivider(body);
+        body.addView(text("性能模式", 17, 0xFFD2E5DC));
+        android.widget.RadioGroup performance = new android.widget.RadioGroup(activity);
+        android.widget.RadioButton high = new android.widget.RadioButton(activity), low = new android.widget.RadioButton(activity);
+        high.setId(View.generateViewId()); low.setId(View.generateViewId());
+        high.setText("高性能"); low.setText("节省内存");
+        high.setTextColor(0xFFD2E5DC); low.setTextColor(0xFFD2E5DC);
+        performance.addView(high); performance.addView(low);
+        performance.check(PerformanceSettings.highPerformance(activity) ? high.getId() : low.getId());
+        performance.setOnCheckedChangeListener((group, id) -> activity.setHighPerformance(id == high.getId()));
+        body.addView(performance);
+        TextView performanceNote = text("高性能：响应更快，占用更多内存。节省内存：空闲释放，再用需加载。", 13, 0xFF8BA69C);
+        performanceNote.setPadding(dp(8), 0, dp(8), dp(12)); body.addView(performanceNote);
+        sectionDivider(body);
+        CheckBox companion = new CheckBox(activity); companion.setText("持续陪伴"); companion.setTextSize(16); companion.setTextColor(0xFFD2E5DC);
         companion.setChecked(activity.isCompanionEnabled()); companion.setOnCheckedChangeListener((button, enabled) -> activity.setCompanionEnabled(enabled));
         body.addView(companion, new LinearLayout.LayoutParams(-1, dp(62)));
+        TextView companionNote = text("无需唤醒，感知讲话情绪并用表情回应；电视对白也可能触发。", 13, 0xFF8BA69C);
+        companionNote.setPadding(dp(8), 0, dp(8), dp(12)); body.addView(companionNote);
+        sectionDivider(body);
         TextView care = text("主动关怀", 17, 0xFFD2E5DC); care.setGravity(Gravity.CENTER_VERTICAL); care.setPadding(dp(8), 0, 0, 0);
         care.setOnClickListener(v -> new CarePanel(activity, this::settings).show());
         body.addView(care, new LinearLayout.LayoutParams(-1, dp(62)));
-        TextView companionNote = text("开启后，无需唤醒即可用表情回应讲话；关闭后，喊“小安”再倾听。电视对白也可能触发。", 13, 0xFF8BA69C);
-        companionNote.setPadding(dp(8), 0, dp(8), dp(12)); body.addView(companionNote);
+        sectionDivider(body);
         TextView brightness = text("屏幕亮度", 17, 0xFFD2E5DC); brightness.setGravity(Gravity.CENTER_VERTICAL); brightness.setPadding(dp(8), 0, 0, 0);
         brightness.setOnClickListener(v -> brightness()); body.addView(brightness, new LinearLayout.LayoutParams(-1, dp(68)));
+        sectionDivider(body);
         TextView weather = text("地区设置", 17, 0xFFD2E5DC); weather.setGravity(Gravity.CENTER_VERTICAL); weather.setPadding(dp(8), 0, 0, 0);
         weather.setOnClickListener(v -> ((WeatherWidget) activity.findViewById(R.id.weather_clock)).showRegionSettings(this::settings));
         body.addView(weather, new LinearLayout.LayoutParams(-1, dp(62)));
         ScrollView scroll = new ScrollView(activity); scroll.addView(body);
         activity.showDrawerPage("设置", true, this::show, scroll);
+    }
+    private void sectionDivider(LinearLayout body) {
+        View divider = new View(activity); divider.setBackgroundColor(0xFF2E4148);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(1));
+        params.setMargins(dp(8), dp(8), dp(8), dp(8)); body.addView(divider, params);
     }
     private void previews() {
         String[] items = BuildConfig.DEBUG
@@ -180,7 +201,7 @@ final class ControlPanel {
             com.soundguardian.core.VoiceUnderstandingResult result = understanding.result;
             text += "\n\n最近听到：" + result.text;
         }
-        text += "\n\n识别文字不会保存，关闭应用后清除。";
+        text += "\n\n关怀及对话文字最多保留3天；其他倾听文字仅临时使用，不保存录音。";
         TextView body = text(text, 14, 0xFFD2E5DC); body.setGravity(Gravity.TOP); body.setPadding(dp(24), dp(24), dp(24), 0);
         activity.showDrawerPage("设备状态", true, this::show, body);
     }

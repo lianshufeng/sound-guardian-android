@@ -24,8 +24,8 @@ public final class AiRetentionDeviceTest {
             isolated.getSharedPreferences("care",0).edit().putBoolean("save_replies",true).commit();SQLiteDatabase db=helper.getWritableDatabase();long now=System.currentTimeMillis();
             db.beginTransaction();try{for(int i=0;i<1100;i++){ContentValues row=new ContentValues();row.put("id","session-"+i);row.put("care","care-"+i);row.put("scenario","S02");row.put("event_id","");row.put("state","ENDED");row.put("reason","TEST");row.put("completed",now-i*1000);row.put("turns","[{\"user\":\"合成样本文字\",\"assistant\":\"回应\",\"played\":\"回应\",\"reason\":\"TEST\",\"segments\":[]}]");db.insertOrThrow("conversations",null,row);}db.setTransactionSuccessful();}finally{db.endTransaction();}
             store.clean(now);try(android.database.Cursor rows=db.rawQuery("SELECT COUNT(*),SUM(CASE WHEN turns<>'[]' THEN 1 ELSE 0 END) FROM conversations",null)){rows.moveToFirst();assertTrue(rows.getInt(0)<=1000);assertTrue(rows.getInt(1)<=300);}
-            store.clean(now+8*86400000L);try(android.database.Cursor rows=db.rawQuery("SELECT COUNT(*) FROM conversations WHERE turns<>'[]'",null)){rows.moveToFirst();assertEquals(0,rows.getInt(0));}
-            store.clean(now+31*86400000L);try(android.database.Cursor rows=db.rawQuery("SELECT COUNT(*) FROM conversations",null)){rows.moveToFirst();assertEquals(0,rows.getInt(0));}
+            store.clean(now+3*86400000L+1);try(android.database.Cursor rows=db.rawQuery("SELECT COUNT(*) FROM conversations WHERE turns<>'[]'",null)){rows.moveToFirst();assertEquals(0,rows.getInt(0));}
+            store.clean(now+3*86400000L+1);try(android.database.Cursor rows=db.rawQuery("SELECT COUNT(*) FROM conversations",null)){rows.moveToFirst();assertEquals(0,rows.getInt(0));}
         }
     }
 }

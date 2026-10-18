@@ -47,8 +47,8 @@ public final class AiLifecycleDeviceTest {
     @Test public void silenceTimeoutAndConfigChangeEndWithoutNewSpeech()throws Exception{
         try(Fixture f=new Fixture()){
             long start=SystemClock.elapsedRealtime();
-            main(f.coordinator::startAfterWake);await(()->!Conversation.active(),5000);
-            assertTrue(SystemClock.elapsedRealtime()-start>=3000);assertEquals("TIMEOUT",GuardianRuntime.conversationState());
+            main(f.coordinator::startAfterWake);await(()->!Conversation.active(),7000);
+            assertTrue(SystemClock.elapsedRealtime()-start>=6000);assertEquals("TIMEOUT",GuardianRuntime.conversationState());
             assertNull(f.input.get());assertEquals(0,f.spoken.get());
             main(f.coordinator::startAfterWake);f.isolated.getSharedPreferences("ai_model",0).edit().putBoolean("enabled",false).commit();await(()->!Conversation.active(),3000);assertNull(f.input.get());
         }

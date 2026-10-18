@@ -56,7 +56,7 @@ public final class MainActivity extends Activity {
     private GuardianRuntime.Status serviceStatus = GuardianRuntime.Status.STOPPED;
     private BroadcastReceiver receiver;
     private final Runnable speechObserver = () -> receive(null);
-    private final Runnable ticker = new Runnable() { public void run() { render(); if (visible) handler.postDelayed(this, touchAnimating ? 100 : 500); } };
+    private final Runnable ticker = new Runnable() { public void run() { render(); if (visible) handler.postDelayed(this, touchAnimating || showSoundLevel ? 100 : 500); } };
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
@@ -112,7 +112,7 @@ public final class MainActivity extends Activity {
             Care.userInteraction();
             behavior.gesture(action, x, y, now); render();
             handler.removeCallbacks(ticker);
-            if (visible) handler.postDelayed(ticker, touchAnimating ? 100 : 500);
+            if (visible) handler.postDelayed(ticker, touchAnimating || showSoundLevel ? 100 : 500);
         });
         LinearLayout captions = new LinearLayout(this); captions.setOrientation(LinearLayout.VERTICAL); captions.setGravity(Gravity.CENTER); captions.setPadding(0, 0, 0, dp(16));
         emotionName = text("", 11, 0xFF8BA69C); emotionName.setId(R.id.emotion_name); emotionName.setGravity(Gravity.CENTER);
@@ -195,6 +195,7 @@ public final class MainActivity extends Activity {
     private void render() {
         long now = SystemClock.elapsedRealtime();
         String input = GuardianRuntime.inputPhase(), dialogue = GuardianRuntime.conversationState();
+        if (input.equals("MONITORING")) input = "IDLE";
         InteractionPorts.UnderstandingState understanding = GuardianRuntime.understandingSnapshot();
         boolean localWindow = input.equals("IDLE") && understanding.window && now >= understanding.at && now - understanding.at <= 500;
         if (localWindow) input = "LISTENING";
@@ -232,7 +233,7 @@ public final class MainActivity extends Activity {
         emotionName.setTranslationY(interacting ? -dp(104) : 0);
         modelResults.setTranslationY(interacting ? -dp(104) : 0);
         updateConversationBack();
-        String hint = dialogue.equals("RECOGNIZING") ? "正在识别，请稍候" : input.equals("LISTENING")
+        String hint = dialogue.equals("CONTINUING_VOICE") ? "正在听你说话" : dialogue.equals("CONTINUING") ? "请继续说" : dialogue.equals("RECOGNIZING") ? "正在识别，请稍候" : input.equals("LISTENING")
                 ? understanding.voice ? "正在听你说话" : localWindow ? "请说话" : Care.activeId().isEmpty() ? "请说话" : "请说出你的回复"
                 : input.equals("CUE") ? "提示音结束后请说话" : input.equals("PREPARING") ? "正在准备，请稍候"
                 : dialogue.equals("THINKING") ? "想一想" : "小安正在回应";
@@ -244,7 +245,7 @@ public final class MainActivity extends Activity {
         modelResults.setVisibility(showEventName ? View.VISIBLE : View.GONE);
         if (showEventName) modelResults.render(snapshot, now);
         if (showSoundLevel) {
-            soundLevelName.setText(String.format(Locale.CHINA, "%.1f dBFS", GuardianRuntime.snapshot().dbfs));
+            soundLevelName.setText(String.format(Locale.CHINA, "声音强度 %d", GuardianRuntime.soundStrength(now)));
         }
         soundLevelName.setVisibility(showSoundLevel ? View.VISIBLE : View.GONE);
     }
@@ -258,6 +259,10 @@ public final class MainActivity extends Activity {
 
     boolean isNameVisible(String key) { return getPreferences(MODE_PRIVATE).getBoolean(key, false); }
     boolean isCompanionEnabled() { return getSharedPreferences("interaction", MODE_PRIVATE).getBoolean("companion_listening", false); }
+    void setHighPerformance(boolean high) {
+        PerformanceSettings.save(this, high);
+        if (listening) startForegroundService(new Intent(this, GuardianService.class));
+    }
     void setCompanionEnabled(boolean enabled) {
         getSharedPreferences("interaction", MODE_PRIVATE).edit().putBoolean("companion_listening", enabled).apply();
         if (listening) startForegroundService(new Intent(this, GuardianService.class));

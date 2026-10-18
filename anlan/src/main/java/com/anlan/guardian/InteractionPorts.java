@@ -56,6 +56,8 @@ public final class InteractionPorts {
             default void onUnderstanding(com.soundguardian.core.VoiceUnderstandingResult result) { onText(result.text); }
             /** 仅在 VAD 当前话轮已结束且其片段全部完成识别后调用。 */
             default void onUtteranceEnd() { }
+            /** VAD片段已结束且识别排空，但没有可用讲话文字；用于撤销疑似续说。 */
+            default void onAnalysisIdle() { }
             default void onVoice(boolean speaking) { }
         }
     }
@@ -126,6 +128,8 @@ public final class InteractionPorts {
         void cancel();
     }
     public interface SpeechStreamListener {
+        /** 主线程在实际播放前询问；false暂缓，消费者有界重试，不丢弃片段。 */
+        default boolean beforePlayback() { return true; }
         default void onSegmentStarted(SpeechRequest segment) { }
         default void onComplete() { }
         default void onCancelled() { }
@@ -137,6 +141,7 @@ public final class InteractionPorts {
         void stop();
         @Override void close();
         interface Progress {
+            default boolean beforePlayback() { return true; }
             default void onPreparing() { }
             default void onStart() { }
             default void onLevel(float amplitude) { }
