@@ -53,4 +53,82 @@ public class EventHistoryTest {
     engine.update(new float[]{0},14600);
     assertFalse(engine.history.get(0).active);
   }
+
+  @Test public void fingerSnapsNeedTwoHitsWithinFifteenSeconds(){
+    EventEngine.Rule snap=new EventEngine.Rule(0,"Finger snapping","打响指",.08f,.30f,.12f,2,15000,true,650,900);
+    EventEngine engine=new EventEngine(Collections.singletonList(snap));
+    engine.update(new float[]{.40f},10000);
+    engine.update(new float[]{0},11000);
+    assertTrue(engine.history.isEmpty());
+    engine.update(new float[]{.40f},24000);
+    assertEquals(1,engine.history.size());
+    assertTrue(engine.history.get(0).active);
+    engine.update(new float[]{0},25000);
+    engine.update(new float[]{0},25800);
+    assertFalse(engine.history.get(0).active);
+    engine.update(new float[]{.40f},40000);
+    engine.update(new float[]{0},41000);
+    assertEquals(1,engine.history.size());
+  }
+
+  @Test public void moderateSnapEdgesConfirmButWeakScoresAndSingleOverlapDoNot(){
+    EventEngine.Rule snap=new EventEngine.Rule(0,"Finger snapping","打响指",.08f,.20f,.12f,2,15000,true,650,900,1000);
+    EventEngine engine=new EventEngine(Collections.singletonList(snap));
+    for(int i=0;i<8;i++)engine.update(new float[]{.19f},10000+i*480);
+    assertTrue(engine.history.isEmpty());
+    engine.update(new float[]{.24f},14000);
+    engine.update(new float[]{.24f},14480);
+    engine.update(new float[]{.24f},14960);
+    assertTrue(engine.history.isEmpty());
+    engine.update(new float[]{.11f},15440);
+    engine.update(new float[]{.23f},18000);
+    assertEquals(1,engine.history.size());
+    assertTrue(engine.history.get(0).active);
+  }
+
+  @Test public void sustainedSnapScoresAreOneHitAndStopClearsPartialSequence(){
+    EventEngine.Rule snap=new EventEngine.Rule(0,"Finger snapping","打响指",.08f,.30f,.12f,2,15000,true,650,900);
+    EventEngine engine=new EventEngine(Collections.singletonList(snap));
+    for(int i=0;i<8;i++)engine.update(new float[]{.9f},10000+i*480);
+    assertTrue(engine.history.isEmpty());
+    engine.update(new float[]{0},14000);
+    assertTrue(engine.history.isEmpty());
+    engine.stop(16000);engine.update(new float[]{.9f},17000);
+    assertTrue(engine.history.isEmpty());
+  }
+
+  @Test public void snapWindowIncludesBoundaryAndExpiresOlderHits(){
+    EventEngine.Rule snap=new EventEngine.Rule(0,"Finger snapping","打响指",.08f,.30f,.12f,2,15000,true,650,900);
+    for(long second:new long[]{25000,25001}){
+      EventEngine engine=new EventEngine(Collections.singletonList(snap));
+      engine.update(new float[]{.9f},10000);engine.update(new float[]{0},11000);
+      assertTrue(engine.history.isEmpty());engine.update(new float[]{.9f},second);
+      assertEquals(second==25000?1:0,engine.history.size());
+    }
+  }
+
+  @Test public void continuousSnapSegmentConfirmsWithoutScoreFallingAndOnlyOnce(){
+    EventEngine.Rule snap=new EventEngine.Rule(0,"Finger snapping","打响指",.08f,.30f,.12f,2,15000,true,650,900,1000);
+    EventEngine engine=new EventEngine(Collections.singletonList(snap));
+    for(int i=0;i<3;i++){engine.update(new float[]{.8f},10000+i*480);assertTrue(engine.history.isEmpty());}
+    engine.update(new float[]{.8f},11440);
+    assertEquals(1,engine.history.size());assertTrue(engine.history.get(0).active);
+    for(int i=4;i<35;i++)engine.update(new float[]{.8f},10000+i*480);
+    assertEquals(1,engine.history.size());
+    engine.update(new float[]{0},28000);assertFalse(engine.history.get(0).active);
+  }
+
+  @Test public void continuousSnapsResetOnLowScoreStaleFramesAndStop(){
+    EventEngine.Rule snap=new EventEngine.Rule(0,"Finger snapping","打响指",.08f,.30f,.12f,2,15000,true,650,900,1000);
+    EventEngine engine=new EventEngine(Collections.singletonList(snap));
+    engine.update(new float[]{.8f},10000);engine.update(new float[]{.8f},10480);
+    engine.update(new float[]{.2f},10960); // 低于开启阈值，仍未低于关闭阈值：不构成第二次边沿。
+    engine.update(new float[]{.8f},11440);engine.update(new float[]{.8f},11920);engine.update(new float[]{.8f},12400);
+    assertTrue(engine.history.isEmpty());
+    engine.update(new float[]{.8f},15000);assertTrue(engine.history.isEmpty());
+    engine.update(new float[]{.8f},15480);engine.stop(15600);
+    engine.update(new float[]{.8f},16000);engine.update(new float[]{.8f},16480);engine.update(new float[]{.8f},16960);
+    assertTrue(engine.history.isEmpty());engine.update(new float[]{.8f},17440);
+    assertEquals(1,engine.history.size());
+  }
 }

@@ -1,0 +1,10 @@
+Offline weather city dictionary
+Coverage: 31 mainland provincial regions; 333 prefecture divisions and 4 municipalities.
+County-level divisions and province-direct county groups are excluded.
+Administrative names/codes: https://github.com/modood/Administrative-divisions-of-China/tree/c49d495b40ac73eb1a66f6eeae5f8fd10696f035
+Coordinates: https://github.com/88250/city-geo/tree/0e7cb877cb75f4767a81d51c5921de33aacc8089
+City Geo copyright (c) 2020-present, b3log.org; Mulan PSL v2.
+Original coordinates were converted from BD-09 through GCJ-02 to approximate WGS84, rounded to 4 decimals.
+Modified by Anlan: grouped provinces, filtered divisions, renamed municipalities, transformed coordinates.
+City centres are weather grid references only. This is a fixed snapshot, not a live administrative registry.
+Rebuild with anlan/tools/prepare-cities.ps1. Retain the accompanying upstream licenses.

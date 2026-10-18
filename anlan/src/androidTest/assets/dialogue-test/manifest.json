@@ -1,0 +1,242 @@
+[
+    {
+        "text":  "今天终于做完了一件事情，我很开心。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  6505,
+        "name":  "happy-normal",
+        "sample_rate":  16000,
+        "sha256":  "2fc11c6f0f3b3ea29eb39a2062c9204946d37795ba8dbe48763a3e27438860cb"
+    },
+    {
+        "text":  "今天终于做完了一件事情，我很开心。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  5625.0625,
+        "name":  "happy-fast",
+        "sample_rate":  16000,
+        "sha256":  "a513e646610ecc527a6057d7eeb7730bce3fe7c5eb5ca036cd502e5baffe70b3"
+    },
+    {
+        "text":  "今天终于做完了一件事情，我很开心。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  7619,
+        "name":  "happy-slow",
+        "sample_rate":  16000,
+        "sha256":  "1113ed990adfb11f2ed9c60da3dbab78b7abe4d16cf656a8bcbe4f883a635dc6"
+    },
+    {
+        "text":  "小安，我想和你聊一会儿。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  5645,
+        "name":  "chat-normal",
+        "sample_rate":  16000,
+        "sha256":  "6b85b32c508d92766e1ed1b9a44681095ff7767b089d28aab198f4991416169a"
+    },
+    {
+        "text":  "小安，我想和你聊一会儿。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  4935.6875,
+        "name":  "chat-fast",
+        "sample_rate":  16000,
+        "sha256":  "ea12a81b20bd66fe24302f1f6392ee522005ce51e6ddb7791c1acb39abe352ba"
+    },
+    {
+        "text":  "小安，我想和你聊一会儿。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  6551,
+        "name":  "chat-slow",
+        "sample_rate":  16000,
+        "sha256":  "a5d13769a9f789c4953e923bccd39807cae2d2be6875af17ce994e687ba22252"
+    },
+    {
+        "text":  "请给我讲一个简短的小故事。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  5410,
+        "name":  "story-normal",
+        "sample_rate":  16000,
+        "sha256":  "c69d22126a8fc76696318da771c8ea67ae8ac14d26fcd8d2814c9994e7ee6abc"
+    },
+    {
+        "text":  "请给我讲一个简短的小故事。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  4747,
+        "name":  "story-fast",
+        "sample_rate":  16000,
+        "sha256":  "91d6e7a34b156ac9c57e5e0ac266aba90ce4d803b53b4cda144b69328ca24c74"
+    },
+    {
+        "text":  "请给我讲一个简短的小故事。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  6250,
+        "name":  "story-slow",
+        "sample_rate":  16000,
+        "sha256":  "b0a9de6cdc6a4f61b7b986238b6f095c06bafb8edbc7b7757063ab83379396c4"
+    },
+    {
+        "text":  "我有点累，想放松一下。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  5415,
+        "name":  "relax-normal",
+        "sample_rate":  16000,
+        "sha256":  "73619b9f040b538841052a682b34e313025c56bd82ead22793fd569b58b3452a"
+    },
+    {
+        "text":  "我有点累，想放松一下。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  4749.5625,
+        "name":  "relax-fast",
+        "sample_rate":  16000,
+        "sha256":  "34091e52ee19991f1f25af540194b1b1f0161ef9644115c1b46edaddaec24933"
+    },
+    {
+        "text":  "我有点累，想放松一下。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  6253,
+        "name":  "relax-slow",
+        "sample_rate":  16000,
+        "sha256":  "fba08c99c18bfcbbfea8dfb61f233f22119a4125e7779dc008004e9b61676626"
+    },
+    {
+        "text":  "我没事，不用担心。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  4830,
+        "name":  "okay-normal",
+        "sample_rate":  16000,
+        "sha256":  "35b90362b6df8f0a76c8f2fdbaea6fb11a8fdb3112ea06784443f0a503974c7d"
+    },
+    {
+        "text":  "我没事，不用担心。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  4279.125,
+        "name":  "okay-fast",
+        "sample_rate":  16000,
+        "sha256":  "675427008245ebb01b131717146c76f0114c460e7316a22f135fd4f08a3f7908"
+    },
+    {
+        "text":  "我没事，不用担心。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  5528,
+        "name":  "okay-slow",
+        "sample_rate":  16000,
+        "sha256":  "ef355176354bd32932ecc581ca0c63cd365b3a0cd849d543dd07ea769f342375"
+    },
+    {
+        "text":  "现在几点了？",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  4010,
+        "name":  "time-normal",
+        "sample_rate":  16000,
+        "sha256":  "ba6c0726010d0ddf3a8a4f90019f4a440bc5c31a593966ce94b3070e0962ad27"
+    },
+    {
+        "text":  "现在几点了？",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  3620,
+        "name":  "time-fast",
+        "sample_rate":  16000,
+        "sha256":  "639957a21db6094fd052e1c68f27fbd9a33946c3c9df0b3b9bde86332a540ee0"
+    },
+    {
+        "text":  "现在几点了？",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  4496,
+        "name":  "time-slow",
+        "sample_rate":  16000,
+        "sha256":  "89a479007692d6bf2073d7e212ff0cefb107b5127261ec6a366947cce5d803c8"
+    },
+    {
+        "text":  "不聊了，再见。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  4420,
+        "name":  "stop-normal",
+        "sample_rate":  16000,
+        "sha256":  "dbe12c07292399f1a6751902d916e1df146b971d2b229e9d4eb591d50cc58824"
+    },
+    {
+        "text":  "不聊了，再见。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  3949.5625,
+        "name":  "stop-fast",
+        "sample_rate":  16000,
+        "sha256":  "4fd90476954da7c7d683eeb2ebe8a6127e9807fd4d04a9f34e64e0639a24aee9"
+    },
+    {
+        "text":  "不聊了，再见。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  5008,
+        "name":  "stop-slow",
+        "sample_rate":  16000,
+        "sha256":  "9d840ac47d8e0b2127eb804b9a7ded80a175ddf22a8dc731420a1ffc2a3fd0b2"
+    },
+    {
+        "text":  "电视里的人刚才说不要取消。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  0,
+        "duration_ms":  5415,
+        "name":  "negative-normal",
+        "sample_rate":  16000,
+        "sha256":  "61e9849ee3c61cc61259ea57310d7f94c9895d6efab3853ecef7de43e94c2ce3"
+    },
+    {
+        "text":  "电视里的人刚才说不要取消。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  2,
+        "duration_ms":  4749.5625,
+        "name":  "negative-fast",
+        "sample_rate":  16000,
+        "sha256":  "2b4e00f3b8ef6cee05b68f5b479808676ce4a2e653e15fed2cf853455579cd0a"
+    },
+    {
+        "text":  "电视里的人刚才说不要取消。",
+        "format":  "s16le-mono",
+        "source":  "Microsoft Huihui Desktop synthetic",
+        "rate":  -2,
+        "duration_ms":  6255,
+        "name":  "negative-slow",
+        "sample_rate":  16000,
+        "sha256":  "1adbf46065e133aaa21b5da37ef9962a9fd25ed451645fc95d5d91b363fe7d11"
+    }
+]

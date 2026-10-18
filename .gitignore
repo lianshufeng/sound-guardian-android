@@ -26,6 +26,13 @@ local.properties
 
 # Model weights: retrieve fixed official files with tools/model_tool.py
 *.tflite
+*.onnx
+/libs/*.aar
+/libs/*-classes.jar
+/evaluation/wakeword-setup/
+/evaluation/tts-setup/
+/evaluation/understanding-setup/
+/core/src/main/assets/tts/model/
 !core/src/main/assets/model_manifest.json
 !core/src/main/assets/model_metadata.json
 !models/**/manifest.json
@@ -42,9 +49,14 @@ local.properties
 *.m4a
 *.flac
 *.pcm
+!core/src/androidTest/assets/wakeword-test/*.pcm
+!core/src/androidTest/assets/understanding-test/*.pcm
+!anlan/src/androidTest/assets/dialogue-test/*.pcm
 
 # Evaluation and local run logs
 /evaluation/*.log
+/evaluation/*.png
+/evaluation/runtime-*/
 /evaluation/debug/
 /evaluation/reports/*.jsonl
 /evaluation/reports/*.csv

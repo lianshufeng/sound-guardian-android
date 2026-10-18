@@ -1,20 +1,25 @@
-# 安澜智能守护音响
+# 安澜智能守护
 
 独立的横屏 Android 应用，包名为 `com.anlan.guardian`，与仓库根目录的 `com.example.soundguardian` 可以同时安装。
 
 ## 当前版本
 
-- 产品：安澜智能守护音响
+- 产品：安澜智能守护
 - 角色：小安
 - 方向：深色常亮、拟人化表情、声音感知守护
 - 横屏：`MainActivity` 固定 landscape
 - 监听：前台麦克风服务，模型在设备本地推理，不保存录音
 - 模型：与原项目相同的 Google MediaPipe YAMNet float32/1
-- 预留：主动关怀、唤醒词、语音输入、对话智能体和语音输出接口
+- 唤醒：本地 sherpa-onnx 检测“小安”，触发收到、聆听和超时恢复守护
+- 播报：本地 Kokoro v1.1-zh FP32 中文女声 `zf_001`，唤醒时语音与字幕同步回应“我在”；合成器按设备内存预算按需驻留
+- 主动关怀：告知、等待回复、场景开关和有界记录；一轮结果保留，启用 AI 后可关联后续对话，远程通信尚未实现
+- AI 对话：一级菜单“AI模型”（位于“关于”上方）配置后接入 OpenAI 兼容流式服务，支持唤醒/点击左上角“安澜”、简短交流、故事和关怀续聊，顶部不再单列“说话”按钮；首轮跳过额外叮声并缩短尾音保护，输入就绪即提示“请说话”。底部白蓝渐变波浪呼吸并在倾听时随采集音量起伏，不显示倒计时；后台保留3秒静默退出，已开口等待话轮及识别完成。底部无结束按钮，返回键结束当前对话或关怀，菜单内仍先返回菜单。默认配置为空。当前验收和限制见 [AI 对话](docs/ai-dialogue-development-plan.md)
 
 ## 构建
 
-在 Android Studio 打开仓库根目录时，Gradle 会导入两个 Android application 模块：`:app`（原应用）和 `:anlan`（安澜，实际目录 `anlan/app`），以及两者共用的 Android Library `:core`。修改配置后执行 Sync Project with Gradle Files，运行时选择 `anlan` 模块即可。两者包名、界面和数据目录保持独立。
+在 Android Studio 打开仓库根目录时，Gradle 会导入两个并列的 Android application 模块：`:app`（原应用，目录 `app/`）和 `:anlan`（安澜，目录 `anlan/`），以及两者共用的 Android Library `:core`。统一使用根目录的 Gradle 配置和 Wrapper。修改配置后执行 Sync Project with Gradle Files，运行时选择 `anlan` 模块即可。两者包名、界面和数据目录保持独立。
+
+两款应用共同使用 `:core` 中的 YAMNet 模型、标签、中文映射、事件规则、音频参数、推理器和事件引擎。共享资源和逻辑只在 `core/` 修改，安澜自己的表情与行为配置才放在 `anlan/src/main/assets/behavior.json`；修改共享能力后需要同时验证两个应用。
 
 在仓库根目录构建安澜：
 
@@ -22,38 +27,62 @@
 .\gradlew.bat :anlan:assembleDebug
 ```
 
-也可以单独使用 Android Studio 打开 `anlan` 目录，该入口会引用同级 `../core`，因此需保留完整仓库目录；或在 `anlan` 目录执行：
+测试和检查同样在仓库根目录执行；请勿单独打开 `anlan/`：
 
 ```powershell
-.\gradlew.bat testDebugUnitTest
-.\gradlew.bat assembleDebug
-.\gradlew.bat lintDebug
+.\gradlew.bat :anlan:testDebugUnitTest
+.\gradlew.bat :anlan:assembleDebug
+.\gradlew.bat :anlan:lintDebug
 ```
 
-`../core/src/main/assets/yamnet.tflite` 不提交 Git；首次克隆后在本目录执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-model.ps1`，脚本下载固定官方版本并校验 SHA-256，不覆盖已有的不同模型。标签、中文映射、规则、metadata 和 manifest 统一保存在 `core`，不在两个 App 内各存一份。安澜自己的 assets 仅保留表情行为配置。
+`core/src/main/assets/yamnet.tflite` 不提交 Git；首次克隆后在仓库根目录执行 `powershell -ExecutionPolicy Bypass -File anlan/tools/prepare-model.ps1`，脚本下载固定官方版本并校验 SHA-256，不覆盖已有的不同模型。标签、中文映射、规则、metadata 和 manifest 统一保存在 `core`，不在两个 App 内各存一份。安澜自己的 assets 仅保留表情行为配置。
 
-从仓库根目录构建时，Debug APK 为 `anlan/app/build/outputs/apk/debug/anlan-debug.apk`；从 `anlan` 独立入口构建时，为 `app/build/outputs/apk/debug/app-debug.apk`。
+首次构建唤醒功能还需在仓库根目录执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-wakeword.ps1`。该脚本下载固定版本的 sherpa-onnx Android 运行库和中文 KWS 模型，校验 SHA-256 后准备本地依赖；运行时不需要网络。唤醒模型、关键词和许可证说明位于 `core/src/main/assets/wakeword/`，输入音频与 YAMNet 共用同一条 16 kHz 单声道 PCM 流。
+
+当前版本还需执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-tts.ps1`（包含唤醒依赖准备）。TTS FP32 模型、音色向量和语言数据保存在 `core/src/main/assets/tts/model/`，不提交 Git；固定下载来源和 SHA-256 位于 `tts/manifest.json`，音色与语速位于 `tts/config.json`，构建前由 `core:verifyTtsAssets` 校验。模型在后台加载、预热“我在”并在空闲时补齐响指回应，随后释放合成器，仅保留有界短句缓存；首次就绪前可能需要等待，菜单“设备状态”可查看播报加载状态和错误。INT8 在 ARM64 真机生成全 NaN，单线程仍失败，因此停用；低端真机内存峰值须按 FP32 重新验收。
+
+文字及情绪识别还需执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-understanding.ps1`。SenseVoice INT8 与 Silero VAD 通过现有 sherpa-onnx 运行；模型契约、配置、哈希和许可证在 `core/src/main/assets/understanding/`，构建前由 `core:verifyUnderstandingAssets` 校验。详见 [触摸互动与陪伴倾听](docs/interaction.md)。
+
+流式文字播报使用同一 `SpeechPlayback.openStream(...)`：增量追加、分句、有界背压、提前合成下一段、固定语速及取消均已提供；AI 对话直接复用该入口。接口及历史模拟逐字输出测试见 [流式播报接入与验收](docs/streaming-speech.md)，新增真实网络验证见 [AI 对话](docs/ai-dialogue-development-plan.md)。
+
+Debug APK 为 `anlan/build/outputs/apk/debug/anlan-debug.apk`。
 
 ## 设计与代码边界
 
 - `FaceView`：眼睛、嘴巴和连续动画的几何绘制。
 - `Emotion`：可表达的视觉状态。
 - `BehaviorEngine`：待机、困倦、打盹、声音事件优先级、过渡和变体。
-- `GuardianService`：安澜的 PCM 采集、事件广播线程；调用共享 `core` 中的推理器、配置与事件引擎，输入参数使用共享 `SoundContract`。
+- `GuardianService`：唯一 PCM 采集与能力连接；`GuardAudioPipeline` 独立推理、确认事件，`EventHistoryWriter` 独立合并写库，输入参数使用共享 `SoundContract`。
+- `WakeWordWorker`：消费共享 PCM 流，在线程中运行 sherpa-onnx“小安”唤醒检测，带有界队列和重复唤醒冷却。
 - `EventStore`：仅保存事件类别和时间，不保存原始录音。
-- `InteractionPorts`：未来主动关怀、唤醒词、语音和对话服务接口。
+- `InteractionPorts`：本地唤醒、统一关怀请求、语音输入和对话服务接口。
 
-首版模拟入口只用于预览表情，不会写入真实事件记录，也不会发起询问、报警或外部通信。
+当前唤醒回应表情、字幕和本地语音，不写入事件记录，也不会发起关怀询问、报警或外部通信。
+
+声音守护支持自然连续打响指，无需刻意间隔：确认连续响指片段，或 15 秒内两次独立响指后显示开心表情，并通过统一 TTS 说“这个节奏让我也开心起来啦！”，字幕跟随真实播放起止。它是明确手势互动，无需开启主动关怀或持续倾听，不等待回复；同一确认事件只说一次，正在播报、关怀回复、讲话、唤醒回应或高优先级事件期间不插话、不积压补播。连续方式按片段确认，不宣称精确数出每次响指；原有独立计数仍要求分数回落后再次命中。响指开启阈值由 0.30 调整为 0.20，以接纳较弱的分类证据；15 秒两次及去重规则不变。本次灵敏度调整尚待真人响指与混淆声音验证，不代表识别出了人的真实情绪。确认事件按现有方式记录。调试版“预览 → 模拟声音事件 → 开心响指（连续或两次）”可同时体验表情与语音，遵守同样的忙碌限制；模拟不写入记录，也不证明麦克风识别通过。见 [响指互动与验证](docs/finger-snap-interaction.md)。
 
 ## 使用
 
 1. 打开 App 即保持前台屏幕常亮，并自动开始监听。首次需要授予麦克风权限，授权后立即自动守护，无需再点击按钮；支持系统通知权限的设备也会请求通知授权。
-2. 主屏和菜单不设守护开关；轻触脸部可以唤醒困倦表情，右上角菜单可查看记录、调整窗口亮度和查看模型状态。
-3. Debug 版菜单包含 26 种表情预览及模拟事件；高优先级真实事件不会被预览覆盖。
-4. 约 90 秒无有效互动后困倦，180 秒后打盹。阈值见 `app/src/main/assets/behavior.json`，打盹不停止声音识别。
+2. 主屏和菜单不设守护开关；脸部轻点会回应微笑，长按会害羞，持续往返抚摸会蹭手，视线跟随触摸位置；点击右上角时间打开菜单，可查看记录、调整窗口亮度和查看设备状态。
+3. Debug 版菜单包含 28 种表情预览及模拟事件；高优先级真实事件不会被预览覆盖。
+   所有版本的“预览 → 场景”均可滚动查看当前支持的日常互动、声音关怀、作息、天气、安全提示、家庭声音、每日提醒、简单陪伴及回复控制；每项包含简短说明，部分能力明确标注实现边界。目录不自动触发场景。
+4. 约 90 秒无有效互动后困倦，180 秒后打盹。阈值见 `anlan/src/main/assets/behavior.json`（相对仓库根目录），打盹不停止声音识别。
 5. 不需要守护时从最近任务中划掉安澜，或在系统设置中强行停止 App，监听服务随之结束。按 Home 退到后台仍会守护，重新打开 App 会自动监听。两个应用可并存安装，但同时录音可能受 Android 的麦克风并发策略限制。
+6. 喊“小安”后立即回应并准备倾听；实际播放“我在”时同步显示字幕。已配置并开启AI模型时，首轮跳过额外叮声并仅保留150毫秒尾音保护，输入就绪即显示“请说话”；3秒未开口在后台静默结束，不显示倒计时，已开口等待完整话轮及识别。未开启AI保留约4秒本地倾听。3秒内重复唤醒不重复回应，播报期间暂停唤醒和倾听分析；高优先级声音仍优先且会中断播报。菜单“设备状态”可查看最近转写、情绪标签和耗时。
+7. 菜单“设置 → 持续陪伴倾听”默认关闭；开启后无需先唤醒即可回应讲话。电视对白也可能触发。转写只保留在内存，关闭 App 后不保存。
 
 ## 验证与限制
+
+### 时间与天气
+
+主屏右上靠右显示天气：本地线条图标、摄氏温度和 `HH:mm` 放在同一排，温度是主要信息，时间为次级信息；天气组垂直居中并向左留出安全距离，不显示日期和体感温度。温度来自当前小时预报，缺失、非有限值或异常范围不展示，旧版无温度缓存仍可读取。产品页面不显示供应商、技术栈和内部参数。点击时间或天气区域直接打开菜单；不再显示“···”，也没有菜单显隐计时。地区选择、自动定位和未来 4 小时预报统一放在“设置 → 地区设置”中，返回时逐级回到设置和主菜单。
+
+天气使用免密钥的 [Open-Meteo](https://open-meteo.com/)：先通过系统网络定位取得粗略坐标，网络定位不可用时尝试系统融合定位，尝试解析城市名，再查询当前时段起 4 小时的逐小时预报；权限被拒、定位不可用或超时，可在“设置 → 地区设置”中查看原因并手动选城市。手动选择使用 APK 内置的 31 个省级区域、337 个地级市/自治州/盟字典，先选省份再选城市，无输入框、无在线城市搜索，断网也能使用。没有任何有效天气缓存时，重新打开页面会立即补试一次；已经有缓存时，失败仍按下一小时再试。模拟器不会自动获得电脑的真实城市，需要设置模拟器位置或手动选择城市。天气入口 `WeatherProvider`、统一数据 `WeatherForecast` 与本地图标独立，更换来源只需替换适配器及代码映射。字典快照和上游许可位于 `src/main/assets/weather/`，由 `tools/prepare-cities.ps1` 固定版本生成。
+
+首次具备位置或城市后查询，主屏可见时每小时尝试一次；页面重建和重启保留本小时尝试记录。失败不弹窗、不立即重试，有效缓存继续按小时切换，过期或未知天气隐藏图标；时间离线可用，跟随系统时间和时区。退到后台暂停天气调度和定位，返回页面到期才补查，不申请后台定位、不持续跟踪。仅缓存城市坐标和最多 4 小时预报，不保存位置轨迹。
+
+免费 API 仅限非商业使用并需注明来源，商用须重新确认授权；海外接口的国内网络可用性及目标真机网络定位仍需实际验收。天气校验：`./gradlew.bat :anlan:testDebugUnitTest :anlan:assembleDebug :anlan:lintDebug`；设备专项测试为 `com.anlan.guardian.WeatherDeviceTest`，其中真实网络测试依赖设备联网。
 
 初版在 V2505A 真机完成 4 项仪器测试：桌面 PCM 分数对照（绝对误差容差 0.002）、事件记录重开、三轮监听启停和页面重建、26 种表情及 Icon 渲染。移除守护开关后，生命周期测试已调整为自动监听、三轮移除任务后停止与重开、页面重建；该测试已编译，尚未重新在手机执行。单元测试覆盖事件合并、优先级、持续警报、冷却恢复、困倦唤醒和会话隔离；Debug 构建和 lint 通过。
 
@@ -61,6 +90,18 @@
 
 当前是调试签名体验版。尚未完成数小时或数天的温度、耗电和后台稳定性测试；后续音箱型号、Android 版本、麦克风和系统权限策略确定后仍需实机回归。固定横屏会受到部分系统大屏或多窗口策略影响。
 
-YAMNet 的输出是声音类别分数，不能据此承诺危险识别准确率，也没有“求救语义理解”。主动关怀、语音唤醒、语音识别、播报和大模型对话只提供接口，未启用。
+YAMNet 的输出是声音类别分数，不能据此承诺危险识别准确率。本地唤醒、文字播报及 SenseVoice 文字与情绪识别已接入；主动关怀由用户开关启用，AI 对话另外配置并开启。求助语言回应不等于已拨号或通知联系人。关怀接口、场景进度和验证边界见 [实施记录](docs/care-implementation.md)。
+
+## 播报开发接口
+
+首轮调度、短句缓存和资源准入已按 [交互性能优化计划](docs/interaction-performance-plan.md)实施；动态TTS延迟目标仍未达到，本轮检查与未完成的真机项目见 [验收记录](docs/interaction-performance-acceptance.md)。
+
+所有业务播报只调用 `SpeechPlayback.speak("需要播报的中文")`，需要携带来源时调用 `SpeechPlayback.speak(SpeechRequest)`。唤醒使用 `SpeechRequest.wake()`；关怀调用 `Care.submit(request, listener)`，协调器通过同一 `SpeechPlayback` 完成播报并按需收集回复。接口要求声音守护服务运行，禁止各业务直接实例化播放器。合成与播放统一由 `LocalSpeechOutput` 执行，PCM 合成适配器在共享 `core`，字幕、取消、失败恢复和会话隔离由服务编排；详细约束见根目录 `AGENTS.md`。
+
+播报首次接入时通过 20 项单元测试及 Android 17 模拟器的全部 14 项设备测试，包含真实中文音频播放与字幕起止、动态中文文本、替换和停止取消、唤醒抑制与恢复；两款 Debug 构建与安澜 lint 通过。2026-10-17 修复真机 INT8 无声后，通用安澜 Debug APK 约 758 MiB；首次启动需后台加载和预热。模型、音色向量不压缩打包，避免大资产压缩导致构建内存不足；不同设备的合成延迟、音量和耗电仍需实机验证。
+
+唤醒检测使用 sherpa-onnx 1.13.8 和中文 WenetSpeech 3.3M KWS 模型，关键词拼音为 `x iǎo ān`，当前提升分数1.8、触发阈值0.08。针对真人快语速/口音漏唤醒的反馈，本轮仅提高关键词加分，实际检查和未验收项见[自然发音调优](docs/wakeword-robustness.md)。历史合成“小安”、普通句子、相近称呼、重置和共享PCM回归不能代替本次验证。测试音频由Windows本地Huihui合成，不是人声录音；真人口音、距离、背景声及误唤醒率仍须实测。
+
+为兼容已连接的 Android 9 环境，当前采用官方 float32 编码器、解码器和连接器。Android 17 x86_64 模拟器通过安澜全部 11 项设备测试（含唤醒提示、聆听与超时恢复的界面闭环）；Android 9 环境通过唤醒正负样本、引擎重启和 YAMNet 并行推理检查。安澜与共享引擎合计 16 项单元测试通过，两款 Debug APK 构建、安澜 lint 通过，两个 APK 的 15 项共享资产均与 `core` 原文件 SHA-256 一致。
 
 参考：[Stack-chan](https://github.com/stack-chan/stack-chan)、[M5Stack-Avatar](https://github.com/stack-chan/m5stack-avatar)。表情绘制为 Android 原生实现，未复制这些项目或 RoboEyes 的代码。模型 manifest 与 metadata 随 assets 保留。

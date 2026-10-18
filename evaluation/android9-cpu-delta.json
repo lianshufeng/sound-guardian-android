@@ -1,0 +1,14 @@
+[
+  {
+    "mode": "foreground",
+    "processTicks": 232,
+    "systemTicks": 5776,
+    "cpuOneCorePercent": 16.07
+  },
+  {
+    "mode": "background",
+    "processTicks": 78,
+    "systemTicks": 5953,
+    "cpuOneCorePercent": 5.24
+  }
+]

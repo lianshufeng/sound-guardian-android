@@ -4,4 +4,3 @@ rootProject.name='SoundGuardian'
 include ':app'
 include ':core'
 include ':anlan'
-project(':anlan').projectDir = file('anlan/app')

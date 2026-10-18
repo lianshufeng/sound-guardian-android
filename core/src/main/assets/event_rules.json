@@ -1,4 +1,4 @@
-{"note":"Demo 启发式，未校准；每个原生标签独立判定，不相加分数。短事件单帧可触发。长事件1.2秒内两帧。", "rules":[
+{"note":"Demo 启发式，未校准；每个原生标签独立判定，不相加分数。短事件单帧可触发。长事件1.2秒内两帧。响指支持15秒两次独立命中，或连续片段确认；连续片段不等于精确次数。", "rules":[
 {"label":"Cough","candidate":0.08,"on":0.30,"off":0.12,"hits":1,"release_ms":650,"merge_ms":1100},
 {"label":"Throat clearing","candidate":0.06,"on":0.24,"off":0.10,"hits":1,"release_ms":650,"merge_ms":900},
 {"label":"Sneeze","candidate":0.08,"on":0.32,"off":0.12,"hits":1,"release_ms":650,"merge_ms":900},
@@ -16,5 +16,6 @@
 {"label":"Walk, footsteps","candidate":0.08,"on":0.30,"off":0.14,"hits":2,"release_ms":1100,"merge_ms":1300},
 {"label":"Alarm","candidate":0.08,"on":0.32,"off":0.14,"hits":2,"release_ms":1100,"merge_ms":1300},
 {"label":"Smoke detector, smoke alarm","candidate":0.06,"on":0.28,"off":0.12,"hits":2,"release_ms":1100,"merge_ms":1300},
-{"label":"Fire alarm","candidate":0.06,"on":0.28,"off":0.12,"hits":2,"release_ms":1100,"merge_ms":1300}
+{"label":"Fire alarm","candidate":0.06,"on":0.28,"off":0.12,"hits":2,"release_ms":1100,"merge_ms":1300},
+{"label":"Finger snapping","candidate":0.08,"on":0.20,"off":0.12,"hits":2,"window_ms":15000,"count_edges":true,"continuous_ms":1000,"release_ms":650,"merge_ms":900}
 ]}

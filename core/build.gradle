@@ -3,15 +3,18 @@ plugins { id 'com.android.library' }
 android {
     namespace 'com.soundguardian.core'
     compileSdk 34
-    defaultConfig { minSdk 26 }
+    defaultConfig { minSdk 26; consumerProguardFiles 'consumer-rules.pro' }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    androidResources { noCompress 'tflite' }
+    androidResources { noCompress 'tflite', 'onnx', 'bin' }
 }
 
 dependencies {
+    // 可选唤醒适配器只编译接口；运行库由启用唤醒的应用打包。
+    compileOnly files(rootProject.file('libs/sherpa-onnx-1.13.8-classes.jar'))
+    compileOnly 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
     implementation 'org.tensorflow:tensorflow-lite:2.17.0'
     testImplementation 'junit:junit:4.13.2'
 }
@@ -43,7 +46,10 @@ tasks.register('verifySharedAssets') {
         if (rules*.label.toSet().size() != rules.size()) throw new GradleException('共享事件规则含重复标签')
         rules.each { rule ->
             if (!labels.contains(rule.label) || !(0 <= rule.off && rule.off < rule.on && rule.on <= 1)
-                    || rule.hits < 1 || rule.release_ms < 0 || rule.merge_ms < 0) throw new GradleException("共享事件规则不合法：${rule.label}")
+                    || rule.hits < 1 || (rule.window_ms != null && rule.window_ms < 1) || rule.release_ms < 0 || rule.merge_ms < 0
+                    || (rule.continuous_ms != null && !(rule.continuous_ms == 0
+                        || rule.count_edges == true && rule.continuous_ms >= 1000 && rule.continuous_ms <= rule.window_ms)))
+                throw new GradleException("共享事件规则不合法：${rule.label}")
         }
         rootProject.allprojects.findAll { it != project && it.plugins.hasPlugin('com.android.application') }.each { app ->
             app.android.sourceSets.each { source ->
@@ -57,3 +63,83 @@ tasks.register('verifySharedAssets') {
     }
 }
 tasks.named('preBuild').configure { dependsOn 'verifySharedAssets' }
+
+tasks.register('verifyWakeWordAssets') {
+    doLast {
+        def assets = file('src/main/assets/wakeword')
+        def manifest = new groovy.json.JsonSlurper().parse(new File(assets, 'manifest.json'), 'UTF-8')
+        manifest.files.each { name, expected ->
+            def asset = new File(assets, name)
+            if (!asset.isFile()) throw new GradleException('缺少唤醒模型，请运行 tools/prepare-wakeword.ps1')
+            def hash = java.security.MessageDigest.getInstance('SHA-256')
+            asset.withInputStream { stream ->
+                byte[] buffer = new byte[8192]; int count
+                while ((count = stream.read(buffer)) != -1) hash.update(buffer, 0, count)
+            }
+            if (hash.digest().encodeHex().toString() != expected) throw new GradleException("唤醒资产哈希不一致：${name}")
+        }
+        def tokens = new File(assets, 'tokens.txt').readLines('UTF-8').collect { it.split(' ')[0] }.toSet()
+        def keywords = new File(assets, 'keywords.txt').getText('UTF-8').trim().split(/\s+/)
+        if (!keywords.takeWhile { !it.startsWith('@') && !it.startsWith(':') && !it.startsWith('#') }.every { tokens.contains(it) })
+            throw new GradleException('唤醒词包含模型不支持的词元')
+        def runtime = rootProject.file('libs/sherpa-onnx-1.13.8.aar')
+        if (!runtime.isFile() || java.security.MessageDigest.getInstance('SHA-256').digest(runtime.bytes).encodeHex().toString() != manifest.runtime_sha256)
+            throw new GradleException('唤醒运行库缺失或哈希不一致，请运行 tools/prepare-wakeword.ps1')
+        def classes = rootProject.file('libs/sherpa-onnx-1.13.8-classes.jar')
+        new java.util.zip.ZipFile(runtime).withCloseable { archive ->
+            def expected = archive.getInputStream(archive.getEntry('classes.jar')).withCloseable { it.bytes }
+            if (!classes.isFile() || !java.util.Arrays.equals(classes.bytes, expected))
+                throw new GradleException('唤醒编译接口与运行库不一致，请运行 tools/prepare-wakeword.ps1')
+        }
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyWakeWordAssets' }
+
+tasks.register('verifyTtsAssets') {
+    doLast {
+        def assets = file('src/main/assets/tts')
+        def manifest = new groovy.json.JsonSlurper().parse(new File(assets, 'manifest.json'), 'UTF-8')
+        manifest.files.each { name, expected ->
+            def asset = new File(assets, 'model/' + name)
+            if (!asset.isFile()) throw new GradleException('缺少中文 TTS 模型，请运行 tools/prepare-tts.ps1')
+            def hash = java.security.MessageDigest.getInstance('SHA-256')
+            asset.withInputStream { stream ->
+                byte[] buffer = new byte[65536]; int count
+                while ((count = stream.read(buffer)) != -1) hash.update(buffer, 0, count)
+            }
+            if (hash.digest().encodeHex().toString() != expected) throw new GradleException("TTS 资产哈希不一致：${name}")
+        }
+        def config = new groovy.json.JsonSlurper().parse(new File(assets, 'config.json'), 'UTF-8')
+        if (manifest.voices[config.voice] != config.speaker_id || !(config.speed > 0 && config.speed <= 2)
+                || !(config.num_threads >= 1 && config.num_threads <= 4)) throw new GradleException('TTS 中文音色、语速或线程配置不合法')
+        def stream = config.stream
+        if (stream == null || !(stream.min_chars >= 1 && stream.max_chars >= stream.min_chars && stream.max_chars <= 2000)
+                || !(stream.max_pending_chars >= stream.max_chars && stream.max_pending_chars <= 16384)
+                || !(stream.flush_ms >= 1 && stream.input_timeout_ms > stream.flush_ms))
+            throw new GradleException('TTS 流式分句、缓冲或输入超时参数不合法')
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyTtsAssets' }
+
+tasks.register('verifyUnderstandingAssets') {
+    doLast {
+        def assets = file('src/main/assets/understanding')
+        def manifest = new groovy.json.JsonSlurper().parse(new File(assets, 'manifest.json'), 'UTF-8')
+        manifest.files.each { name, expected ->
+            def asset = new File(assets, name)
+            if (!asset.isFile()) throw new GradleException('缺少语音理解模型，请运行 tools/prepare-understanding.ps1')
+            def hash = java.security.MessageDigest.getInstance('SHA-256')
+            asset.withInputStream { stream ->
+                byte[] buffer = new byte[65536]; int count
+                while ((count = stream.read(buffer)) != -1) hash.update(buffer, 0, count)
+            }
+            if (hash.digest().encodeHex().toString() != expected) throw new GradleException("语音理解资产哈希不一致：${name}")
+        }
+        def config = new groovy.json.JsonSlurper().parse(new File(assets, 'config.json'), 'UTF-8')
+        if (manifest.runtime_version != '1.13.8' || config.sample_rate != 16000 || config.language != 'zh'
+                || !(config.num_threads >= 1 && config.num_threads <= 2)
+                || !(config.max_segment_s >= 2 && config.max_segment_s <= 8))
+            throw new GradleException('语音理解运行库或输入契约不合法')
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'verifyUnderstandingAssets' }

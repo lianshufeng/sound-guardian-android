@@ -33,6 +33,10 @@ python tools/model_tool.py --install
 - 应用启动会验证固定哈希和输入输出契约；回退官方版本可重新执行 `--install`。
 - 权重由脚本获取，不提交 Git；manifest、metadata、标签和中文映射提交源码库。Gradle 不自动下载模型，依赖首次解析仍需要网络。
 - `tools/get_yamnet.ps1` 是已停用的早期下载脚本，避免误写旧应用 assets；当前流程请使用 `model_tool.py --install`，或 `anlan/tools/prepare-model.ps1`。
+- 安澜唤醒依赖使用 `tools/prepare-wakeword.ps1` 准备；运行库与 KWS 模型不提交 Git，脚本会校验固定 SHA-256。唤醒模型和“小安”关键词配置统一位于 `core/src/main/assets/wakeword/`。
+- 中文本地 TTS 使用 sherpa-onnx Kokoro v1.1-zh FP32 和 `tools/prepare-tts.ps1` 准备（包含唤醒依赖）；模型与语言数据统一在 `core/src/main/assets/tts/` 维护。INT8 在 ARM64 真机出现无效样本，暂不启用。安澜所有业务播报统一走 `SpeechPlayback.speak(...)`，唤醒时声音与“我在”字幕同步；首批主动关怀通过统一请求与回复方法接入，默认关闭，见 [关怀实施记录](anlan/docs/care-implementation.md)。
+- 中文文字及声音情绪识别继续使用同一 sherpa-onnx，执行 `tools/prepare-understanding.ps1` 准备 SenseVoice INT8 和 Silero VAD；资产统一在 `core/src/main/assets/understanding/`，构建执行 `core:verifyUnderstandingAssets`。安澜新增触摸互动和可选持续陪伴倾听，具体行为与性能验证见 [交互说明](anlan/docs/interaction.md)。
+- 两款应用按启用能力打包：原 App 只保留声音守护资源，排除唤醒、TTS 和语音理解模型，Debug APK 约 22 MiB；安澜打包语音资源。源码仍共享同一 core，不能在应用模块中复制模型。
 
 ## 打开与构建
 用 Android Studio Jellyfish（支持 AGP 8.4）或更新版本打开仓库根目录，不能只打开 `app/`。固定环境：Gradle Wrapper 8.6、AGP 8.4.2、compile/target SDK 34、最低 Android 8.0（API 26）。建议 JDK 17；本机也使用 JDK 21 完成过构建。项目使用 Java 17，无 Kotlin 编译插件；Kotlin BOM 1.9.24 用于统一传递依赖。
@@ -72,6 +76,10 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 ## 工程约定
 工程包含 `:app`（原应用）、`:anlan`（安澜）和 Android Library `:core`（共享声音引擎）。两款应用都依赖 `:core`，包名、界面、通知和历史数据独立。
 
+`app/` 与 `anlan/` 为并列应用模块，均采用 `build.gradle` + `src/` 结构，统一使用仓库根目录的 Gradle 配置和 Wrapper。分别运行 `:app:assembleDebug` 和 `:anlan:assembleDebug` 构建，APK 分别输出到 `app/build/outputs/apk/debug/` 和 `anlan/build/outputs/apk/debug/`。
+
+两款应用通过 `:core` 共享模型与声音引擎。YAMNet 模型、原生标签、中文映射、模型元数据、`event_rules.json`、音频参数、`YamnetClassifier`、`EventEngine` 和 `AppConfig` 只能在 `core/` 维护；App 不得复制或覆盖这些资源和逻辑。两个 App 可以分别实现界面、前台服务外壳、事件展示、历史记录和产品交互；安澜专属的表情与行为配置维护在 `anlan/src/main/assets/behavior.json`。共享能力发生变化时，必须同时构建并验证 `:app` 和 `:anlan`。
+
 模型权重、原生标签、中文映射、`event_rules.json` 仅在 `core/src/main/assets/` 维护；推理器、配置加载、事件确认与音频参数仅在 `core/src/main/java/com/soundguardian/core/` 维护。`core:verifySharedAssets` 在构建前校验模型哈希、标签和规则，并禁止 App 的 assets 覆盖同名文件。修改共享规则后需要重新打包两款应用；已安装 APK 不会自动更新。
 
 | 文件 | 职责 |
@@ -86,6 +94,8 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 原生 `yamnet_labels.txt` 与展示映射 `zh_labels.json` 分开，已补齐 521 类中文。`event_rules.json` 是实际事件配置来源。
 
 ## 3 秒上下文与事件规则
+
+普通规则保留 3 秒分数上下文；`Finger snapping` 支持两种确认方式：`window_ms=15000`、`count_edges=true` 累计两次独立响指证据，或 `continuous_ms=1000` 确认连续响指片段，不要求中间分数回落。连续方式要求相邻有效帧不中断且证据跨度至少 1 秒（当前步长下通常约 1.44 秒），减少单个声音的重叠帧误触发；它不等于精确两次。片段持续期间合并为同一事件；其他规则默认维持原有 1.2 秒帧命中方式。
 
 采集满 15600 样本即开始推理，以约 0.48 秒重叠更新；最近 3 秒按时间保存帧结果，不拼接各类别的历史最高分作为当前判断。所有 521 类都参与候选排序，包括说话、音乐、噪声和安静。
 
@@ -102,6 +112,7 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 | 哀鸣、呻吟（Wail, moan） | 25% | 10% | 1.2 秒内两帧 |
 | 呻吟（Groan） | 25% | 10% | 单帧 |
 | 敲击 | 40% | 18% | 单帧 |
+| 打响指 | 20% | 12% | 连续片段，或 15 秒内 2 次独立命中 |
 | 轻敲 | 38% | 16% | 单帧 |
 | 拍击 | 32% | 14% | 单帧 |
 | 破碎、撞击声 | 32% | 12% | 单帧 |
@@ -114,7 +125,7 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 
 长事件的两帧不要求连续。开启后按关闭阈值维持证据；最后证据后等待约 650 ms 或 1100 ms 再结束，同类按配置的约 0.9～1.3 秒合并。各类独立判定，分数不相加。配置中的 `candidate` 尚未用于过滤雷达候选；当前雷达使用全类别前 3 名，不设此门槛。
 
-这些规则未经校准；敲击不解释为敲门或拍桌子，撞击不解释为跌倒，呻吟不解释为身体不适。事件和未读状态主要保存在当前服务/页面内存中，重启服务或应用不保证保留。时间由帧结束时间回推窗口起点，持续时间只是估计值。
+这些规则未经校准；敲击不解释为敲门或拍桌子，撞击不解释为跌倒，呻吟不解释为身体不适，响指片段只作为开心互动的拟人化线索，不等于人的真实情绪。事件和未读状态主要保存在当前服务/页面内存中，重启服务或应用不保证保留。时间由帧结束时间回推窗口起点，持续时间只是估计值。
 
 数据目录 `data/raw`、`annotations`、`processed`、`splits` 仅作未来脚手架；`configs`、`outputs`、`evaluation` 用于未来训练/评估说明。按演员/录音组/设备分组切分，区分片段弱标签和事件起止标签；未来可冻结 YAMNet 编码器训练分类头，或可选微调后导出、校验并替换 assets 模型。
 

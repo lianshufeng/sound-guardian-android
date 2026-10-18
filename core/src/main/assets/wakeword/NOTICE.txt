@@ -1,0 +1,12 @@
+sherpa-onnx 1.13.8: https://github.com/k2-fsa/sherpa-onnx/tree/v1.13.8
+Copyright (c) sherpa-onnx contributors. Apache License 2.0.
+
+Chinese keyword model: sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01
+https://www.modelscope.cn/models/pkufool/sherpa-onnx-kws-zipformer-wenetspeech-3.3M-2024-01-01
+The upstream model card declares Apache License 2.0.
+Encoder, decoder and joiner use the upstream float32 variants for wider device compatibility.
+The custom keyword configuration is maintained by this project.
+
+ONNX Runtime: https://github.com/microsoft/onnxruntime
+Copyright (c) Microsoft Corporation. MIT License.
+See LICENSE-sherpa.txt and LICENSE-onnxruntime.txt in this directory.

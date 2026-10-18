@@ -1,0 +1,25 @@
+{
+  "note": "首批本地语音关怀；只使用已有共享确认事件，不新增模型阈值。未登记的场景尚未启用。",
+  "events": [
+    {"id":"S02","group":"body","label":"Cough","hits":3,"window_ms":120000,"mode":"ASK","text":"听到几声咳嗽，需要歇一会儿吗？"},
+    {"id":"S05","group":"body","label":"Throat clearing","hits":3,"window_ms":120000,"mode":"ASK","text":"听到几次清嗓的声音，需要歇一会儿吗？"},
+    {"id":"S06","group":"body","label":"Sneeze","hits":3,"window_ms":120000,"mode":"ASK","text":"听到几声喷嚏，需要休息一下吗？"},
+    {"id":"S07","group":"body","label":"Groan","hits":2,"duration_ms":6000,"window_ms":30000,"mode":"ASK","text":"听到像是不舒服的声音，需要帮忙吗？"},
+    {"id":"S07","group":"body","label":"Wail, moan","hits":2,"duration_ms":6000,"window_ms":30000,"mode":"ASK","text":"听到像是不舒服的声音，需要帮忙吗？"},
+    {"id":"S10","group":"emotion","label":"Crying, sobbing","hits":2,"duration_ms":6000,"window_ms":120000,"mode":"ASK","text":"我在，需要我安静陪你一会儿吗？"},
+    {"id":"S41","group":"family","label":"Knock","hits":3,"window_ms":30000,"mode":"NOTICE","text":"听到像是敲门的声音，请留意一下。"},
+    {"id":"S43","group":"family","label":"Baby cry, infant cry","hits":2,"duration_ms":6000,"window_ms":60000,"mode":"NOTICE","text":"听到持续的婴儿哭声，请留意一下。"}
+  ],
+  "safety": [
+    {"id":"S33","label":"Smoke detector, smoke alarm","text":"听到烟雾警报声，请立即留意并核实警报来源。"},
+    {"id":"S34","label":"Fire alarm","text":"听到火警声，请立即留意周围情况。"},
+    {"id":"S35","label":"Alarm","text":"听到警报声，请留意一下。"},
+    {"id":"S36","label":"Shatter","text":"听到像是碎裂的声音，请留意周围。"},
+    {"id":"S36","label":"Smash, crash","text":"听到撞击声，请留意一下。"}
+  ],
+  "emotions": [
+    {"id":"S09","label":"SAD","text":"我在，想聊一会儿，还是让我安静陪着？"},
+    {"id":"S11","label":"ANGRY","text":"需要我安静陪着，还是听你说一会儿？"},
+    {"id":"S12","label":"FEARFUL","text":"我在，需要帮忙吗？"}
+  ]
+}

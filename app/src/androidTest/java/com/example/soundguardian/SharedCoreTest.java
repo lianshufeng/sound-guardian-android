@@ -16,8 +16,13 @@ public final class SharedCoreTest {
     @Test public void originalAppLoadsSharedAssetsAndInference() throws Exception {
         android.content.Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
         AppConfig config = new AppConfig(context);
+        java.util.List<String> packaged = java.util.Arrays.asList(context.getAssets().list(""));
+        assertFalse(packaged.contains("tts"));
+        assertFalse(packaged.contains("understanding"));
+        assertFalse(packaged.contains("wakeword"));
         assertEquals(SoundContract.CLASSES,config.labels.length);
-        assertEquals(18,config.rules.size());
+        assertEquals(19,config.rules.size());
+        assertEquals(1000,config.rules.stream().filter(rule->rule.label.equals("Finger snapping")).findFirst().get().continuousMs);
         EventEngine.Rule cough=config.rules.stream().filter(r->r.label.equals("Cough")).findFirst().get();
         assertEquals(.30f,cough.on,.00001f);
         assertEquals(.12f,cough.off,.00001f);

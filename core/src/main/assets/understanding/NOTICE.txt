@@ -1,0 +1,13 @@
+SenseVoice INT8 is exported by the sherpa-onnx project from SenseVoiceSmall.
+Source: https://github.com/QwenAudio/SenseVoice
+Model: https://huggingface.co/FunAudioLLM/SenseVoiceSmall
+Pinned export revision and SHA-256 are in manifest.json.
+The export's original SENSEVOICE-LICENSE points to the FunASR model license.
+FUNASR-MODEL-LICENSE preserves the upstream model license; it is distinct from the runtime's license.
+
+Silero VAD model is supplied by sherpa-onnx's official asr-models release.
+Source: https://github.com/snakers4/silero-vad
+The upstream MIT license is preserved in SILERO-LICENSE.
+
+Runtime: existing sherpa-onnx 1.13.8; see wakeword/NOTICE.txt and runtime licenses.
+All inference is local. Vocal emotion tags describe acoustic cues and do not establish a person's mental state.

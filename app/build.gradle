@@ -3,7 +3,11 @@ plugins { id 'com.android.application' }
 android { namespace 'com.example.soundguardian'; compileSdk 34
     defaultConfig { applicationId 'com.example.soundguardian'; minSdk 26; targetSdk 34; versionCode 1; versionName '0.1.0'; testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
-    androidResources { noCompress 'tflite' }
+    androidResources {
+        noCompress 'tflite', 'onnx', 'bin'
+        // 原应用只启用声音守护；模型仍由 core 唯一维护，按应用能力选择打包。
+        ignoreAssetsPatterns.addAll(['tts', 'understanding', 'wakeword'])
+    }
     sourceSets.androidTest.assets.srcDir(project(':core').file('src/androidTest/assets'))
 }
 dependencies {

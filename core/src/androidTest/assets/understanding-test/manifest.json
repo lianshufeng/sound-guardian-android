@@ -1,0 +1,7 @@
+{
+  "source": "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17/resolve/2365baeacb507f821a0c8120fcee3d484dba7a07/test_wavs/zh.wav",
+  "conversion": "RIFF data chunk only, PCM16 little-endian, mono, 16000 Hz",
+  "sha256": "4044b0963786a001e8196cbcf3c38612e92655d07c718b0506f5f1a50b5b2cc5",
+  "expected_text_contains": "时间",
+  "purpose": "Chinese text, emotion metadata and VAD integration smoke test; not an emotion accuracy benchmark."
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "module": "app",
+    "bytes": 22648712,
+    "checked": 6,
+    "excludedDirectoriesEntries": 0,
+    "mismatches": []
+  },
+  {
+    "module": "anlan",
+    "bytes": 795252174,
+    "checked": 392,
+    "excludedDirectoriesEntries": 0,
+    "mismatches": []
+  }
+]

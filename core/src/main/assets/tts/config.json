@@ -1,0 +1,13 @@
+{
+  "voice": "zf_001",
+  "speaker_id": 3,
+  "speed": 0.95,
+  "num_threads": 2,
+  "stream": {
+    "min_chars": 12,
+    "max_chars": 40,
+    "max_pending_chars": 512,
+    "flush_ms": 700,
+    "input_timeout_ms": 30000
+  }
+}

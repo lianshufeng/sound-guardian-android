@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-18",
+  "source": "synthetic-text/real-model",
+  "model": "qwen3.7-flash",
+  "disable_thinking": true,
+  "cases": [],
+  "within80": 0,
+  "maxChars": null
+}

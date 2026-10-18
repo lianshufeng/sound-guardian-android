@@ -19,7 +19,7 @@ public class DebugActivity extends AppCompatActivity {
     TextView title=label("观察与调试",25,0xFF17302D);page.addView(title,margin(0,18,0,4));
     TextView subtitle=label("守护规则先于模型细节",13,0xFF63736F);page.addView(subtitle,margin(0,0,0,18));
     page.addView(label("守护事件规则",18,0xFF17302D),margin(0,0,0,10));
-    if(config!=null)for(EventEngine.Rule r:config.rules){TextView rule=label(String.format(Locale.CHINA,"%s     开启 %.0f%%   ·   关闭 %.0f%%   ·   %s",r.zh,r.on*100,r.off*100,r.hits==1?"单帧":"1.2秒内两帧"),14,0xFF315C52);rule.setBackgroundResource(R.drawable.card_surface);rule.setPadding(18,15,18,15);page.addView(rule,margin(0,0,0,7));}
+    if(config!=null)for(EventEngine.Rule r:config.rules){TextView rule=label(String.format(Locale.CHINA,"%s     开启 %.0f%%   ·   关闭 %.0f%%   ·   %s%s",r.zh,r.on*100,r.off*100,r.hits==1?"单帧":String.format(Locale.CHINA,"%.1f秒内%d%s",r.window/1000f,r.hits,r.countEdges?"次独立命中":"帧"),r.continuousMs>0?String.format(Locale.CHINA," / 连续证据≥%.1f秒",r.continuousMs/1000f):""),14,0xFF315C52);rule.setBackgroundResource(R.drawable.card_surface);rule.setPadding(18,15,18,15);page.addView(rule,margin(0,0,0,7));}
     page.addView(label("实时诊断",18,0xFF17302D),margin(0,18,0,10));
     output=new TextView(this);output.setTextSize(13);output.setTextColor(0xFF63736F);output.setTextIsSelectable(true);output.setPadding(18,18,18,18);output.setBackgroundResource(R.drawable.card_surface);page.addView(output,new LinearLayout.LayoutParams(-1,-2));setContentView(root);
     Intent snapshot=getIntent().getParcelableExtra("snapshot");display(snapshot);

@@ -1,0 +1,16 @@
+<resources>
+    <item name="face" type="id" />
+    <item name="menu" type="id" />
+    <item name="emotion_name" type="id" />
+    <item name="event_name" type="id" />
+    <item name="sound_level" type="id" />
+    <item name="header" type="id" />
+    <item name="conversation_bar" type="id" />
+    <item name="input_hint" type="id" />
+    <item name="weather_clock" type="id" />
+    <item name="weather_icon" type="id" />
+    <item name="weather_temperature" type="id" />
+    <item name="weather_apparent_temperature" type="id" />
+    <item name="clock" type="id" />
+    <item name="date" type="id" />
+</resources>
