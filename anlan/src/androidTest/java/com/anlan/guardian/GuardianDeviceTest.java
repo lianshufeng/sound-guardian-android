@@ -417,6 +417,12 @@ public final class GuardianDeviceTest {
                 GuardianRuntime.publishInput("MONITORING"); GuardianRuntime.publishConversation("ui-continuation", "THINKING");
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
                 assertEquals("想一想", hint.getText().toString());
+                GuardianRuntime.publishConversation("ui-continuation", "WAITING_REPLY");
+                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
+                assertEquals("还在想，你也可以继续说", hint.getText().toString());
+                GuardianRuntime.publishConversation("ui-continuation", "PREPARING_SPEECH");
+                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
+                assertEquals("正在准备声音", hint.getText().toString());
                 GuardianRuntime.publishInput("LISTENING"); GuardianRuntime.publishConversation("", "IDLE");
             });
             SystemClock.sleep(300);

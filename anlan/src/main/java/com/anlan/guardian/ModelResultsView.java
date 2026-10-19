@@ -10,13 +10,22 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Locale;
 
 /** 模型事件文字与置信度角标向上漂浮并淡出；限制数量与重复频率，不写入事件记录。 */
 final class ModelResultsView extends FrameLayout {
-    private static final long LIFETIME_MS = 3200, REPEAT_MS = 2400, INTERVAL_MS = 750;
+    private static final long LIFETIME_MS = 2400, REPEAT_MS = 4800, INTERVAL_MS = 500;
+    private static final long PENDING_MS = 3200;
+    private static final int MAX_PENDING = 12, MAX_VISIBLE = 6;
     private final Map<String, Long> recent = new HashMap<>();
+    private final Map<String, Pending> pending = new LinkedHashMap<>();
+    private static final class Pending {
+        final GuardianRuntime.ModelResult result;
+        final long seenAt;
+        Pending(GuardianRuntime.ModelResult result, long seenAt) { this.result = result; this.seenAt = seenAt; }
+    }
     private long nextBubbleAt;
     private GuardianRuntime.Snapshot lastSnapshot;
 
@@ -30,15 +39,22 @@ final class ModelResultsView extends FrameLayout {
         if (snapshot.status != GuardianRuntime.Status.LISTENING) {
             clearBubbles(); lastSnapshot = snapshot; return;
         }
-        if (snapshot == lastSnapshot) return;
-        lastSnapshot = snapshot;
-        if (now < nextBubbleAt || getChildCount() >= 4) return;
         recent.entrySet().removeIf(entry -> now - entry.getValue() >= REPEAT_MS);
-        for (GuardianRuntime.ModelResult result : snapshot.modelResults) {
-            if (result.score < .25f || recent.containsKey(result.label)) continue;
-            recent.put(result.label, now); nextBubbleAt = now + INTERVAL_MS;
-            floatBubble(result); break;
+        pending.entrySet().removeIf(entry -> now - entry.getValue().seenAt >= PENDING_MS);
+        if (snapshot != lastSnapshot) {
+            lastSnapshot = snapshot;
+            for (GuardianRuntime.ModelResult result : snapshot.modelResults) {
+                if (!Float.isFinite(result.score) || result.score < .25f || recent.containsKey(result.label)) continue;
+                // 更新分数但保留排队次序，持续高分项不能挤掉已等待的其他声音。
+                if (pending.containsKey(result.label) || pending.size() < MAX_PENDING)
+                    pending.put(result.label, new Pending(result, now));
+            }
         }
+        if (now < nextBubbleAt || getChildCount() >= MAX_VISIBLE || pending.isEmpty()) return;
+        String label = pending.keySet().iterator().next();
+        GuardianRuntime.ModelResult result = pending.remove(label).result;
+        recent.put(label, now); nextBubbleAt = now + INTERVAL_MS;
+        floatBubble(result);
     }
 
     private void floatBubble(GuardianRuntime.ModelResult result) {
@@ -57,7 +73,7 @@ final class ModelResultsView extends FrameLayout {
         animator.setInterpolator(new android.view.animation.LinearInterpolator());
         animator.addUpdateListener(animation -> {
             float progress = (float) animation.getAnimatedValue();
-            bubble.setTranslationY(-dp(130) * progress);
+            bubble.setTranslationY(-dp(150) * progress);
             bubble.setAlpha(progress < .1f ? progress / .1f : progress < .4f ? 1 : (1 - progress) / .6f);
         });
         animator.addListener(new AnimatorListenerAdapter() {
@@ -68,7 +84,7 @@ final class ModelResultsView extends FrameLayout {
 
     private void clearBubbles() {
         for (int i = getChildCount() - 1; i >= 0; i--) ((ValueAnimator) getChildAt(i).getTag()).cancel();
-        removeAllViews(); recent.clear(); nextBubbleAt = 0;
+        removeAllViews(); recent.clear(); pending.clear(); nextBubbleAt = 0; lastSnapshot = null;
     }
     @Override protected void onVisibilityChanged(View changedView, int visibility) {
         super.onVisibilityChanged(changedView, visibility);

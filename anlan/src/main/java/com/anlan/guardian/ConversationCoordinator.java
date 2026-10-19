@@ -24,6 +24,7 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
         void stopSpeech();
         default void prepareSpeech() { }
         default boolean claimInputForPlayback() { return input() == null || input().suppressIfIdle(); }
+        default boolean inputIdle() { return input() == null || input().isInputIdle(); }
         default void retainInput(long timeoutMs) { if (input() != null) input().retainInput(timeoutMs); }
     }
     private final Context app;
@@ -53,7 +54,8 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
     private volatile boolean closed, started;
     private boolean speaking, waiting;
     private boolean inputOpen, replyPending, continuing, candidate;
-    private long inputGeneration, candidateAt, continuationVersion;
+    private long inputGeneration, candidateAt, continuationVersion, replyAt;
+    private boolean replyHasContent;
     private long deadline;
     private StringBuilder utterance = new StringBuilder();
     private final List<VoiceUnderstandingResult> segments = new ArrayList<>();
@@ -101,7 +103,7 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
             final long initialWait = immediate ? config.wakeListenMs : config.listenMs;
             host.startInput(new InteractionPorts.SpeechInput.Result() {
                 @Override public void onText(String text) { }
-                @Override public void onReady() { if (inputCurrent(turn)) { deadline = SystemClock.elapsedRealtime() + initialWait; if (replyPending) { GuardianRuntime.publishInput("MONITORING"); state("THINKING"); } else state("LISTENING"); main.postDelayed(() -> checkInput(turn), 100); } }
+                @Override public void onReady() { if (inputCurrent(turn)) { deadline = SystemClock.elapsedRealtime() + initialWait; if (replyPending) { GuardianRuntime.publishInput("MONITORING"); showReplyState(); } else state("LISTENING"); main.postDelayed(() -> checkInput(turn), 100); } }
                 @Override public void onUnderstanding(VoiceUnderstandingResult result) {
                     if (!inputCurrent(turn) || !(waiting || replyPending) || !validSpeech(result)) return;
                     Conversation.consumed(result.id);
@@ -111,8 +113,9 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
                     }
                     int size = utterance.codePointCount(0, utterance.length()) + result.text.codePointCount(0, result.text.length());
                     if (size > config.inputChars) { cancelReply(); closeInput(); say("这段话有点长，我们分开说吧。", true); return; }
-                    if (replyPending) {
-                        cancelReply(); waiting = true; continuing = true; spoke = true; voiceAt = SystemClock.elapsedRealtime();
+                    if (replyPending && !continuing) {
+                        // 先收齐本批续说，旧草稿继续有界准备；稳定后才统一替换。
+                        waiting = true; continuing = true; spoke = true; voiceAt = SystemClock.elapsedRealtime();
                     }
                     if (!spoke) { spoke = true; voiceAt = SystemClock.elapsedRealtime(); }
                     segments.add(result); utterance.append(result.text);
@@ -133,16 +136,20 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
                     if (!inputCurrent(turn) || !waiting || utterance.length() == 0) return;
                     if (!continuing) handle(utterance.toString().trim());
                     else {
+                        candidate = false;
                         final long version = ++continuationVersion;
                         state("CONTINUING");
                         main.postDelayed(() -> {
-                            if (inputCurrent(turn) && waiting && version == continuationVersion) handle(utterance.toString().trim());
+                            if (inputCurrent(turn) && waiting && version == continuationVersion && host.inputIdle()) {
+                                cancelReply();
+                                handle(utterance.toString().trim());
+                            }
                         }, config.continuationSilenceMs);
                     }
                 }
                 @Override public void onAnalysisIdle() {
-                    if (inputCurrent(turn) && replyPending && candidate) { candidate = false; GuardianRuntime.publishInput("MONITORING"); state("THINKING"); }
-                    else if (inputCurrent(turn) && continuing && waiting) onUtteranceEnd();
+                    if (inputCurrent(turn) && continuing && waiting) onUtteranceEnd();
+                    else if (inputCurrent(turn) && replyPending && candidate) { candidate = false; GuardianRuntime.publishInput("MONITORING"); showReplyState(); }
                 }
                 @Override public void onError(String message) { if (inputCurrent(turn)) finish("INPUT_FAILED"); }
             }, Math.min(120000, initialWait + config.utteranceMs + config.graceMs + config.requestMs), immediate);
@@ -197,9 +204,13 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
     private void askModel(String text) {
         final long turn = ++epoch;
         replyPending = true;
+        replyAt = SystemClock.elapsedRealtime(); replyHasContent = false;
         if (inputOpen) host.retainInput(config.requestMs + config.utteranceMs + config.graceMs);
         if (inputOpen) GuardianRuntime.publishInput("MONITORING");
         state("THINKING");
+        main.postDelayed(() -> {
+            if (current(turn) && replyPending && !candidate && !continuing) showReplyState();
+        }, config.waitFeedbackMs);
         host.prepareSpeech();
         List<InteractionPorts.DialogueMessage> messages;
         try {
@@ -221,6 +232,8 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
                     if (owned.get() != null) return;
                     java.util.concurrent.FutureTask<Void> opening = new java.util.concurrent.FutureTask<>(() -> {
                         if (!current(turn)) throw new IllegalStateException("CANCELLED");
+                        replyHasContent = true;
+                        if (!candidate && !continuing) showReplyState();
                         stream = SpeechPlayback.openStream(InteractionPorts.SpeechRequest.Source.DIALOGUE, eventId,
                     new InteractionPorts.SpeechStreamListener() {
                         public boolean beforePlayback() { return admitPlayback(turn); }
@@ -270,7 +283,7 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
                 }
                 public void onError(String reason) { main.post(() -> {
                     if (!current(turn)) return;
-                    if (replyPending && candidate) { main.postDelayed(() -> onError(reason), 100); return; }
+                    if (replyPending && (candidate || continuing)) { main.postDelayed(() -> onError(reason), 100); return; }
                     networkReason[0] = reason;
                     endingReason=reason;
                     if (owned.get()!=null) { owned.get().end(); state("INTERRUPTED"); }
@@ -284,7 +297,7 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
     }
     private void emptyReply(long turn) {
         if (!current(turn)) return;
-        if (candidate) main.postDelayed(() -> emptyReply(turn), 100);
+        if (candidate || continuing) main.postDelayed(() -> emptyReply(turn), 100);
         else say("这次没有收到可朗读的回答，请稍后再试。", false);
     }
     boolean acceptingSupplement() { return started && inputOpen && (replyPending || waiting); }
@@ -292,11 +305,15 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
         if (!current(turn)) return false;
         if (!host.available()) { finish("HIGH_PRIORITY_EVENT"); return false; }
         if (!replyPending) return speaking;
-        if (candidate || !host.claimInputForPlayback()) return false;
+        if (candidate || continuing || !host.claimInputForPlayback()) return false;
         closeInput(); replyPending = false; speaking = true; state("PREPARING_SPEECH"); return true;
     }
     private void closeInput() {
         inputOpen = false; inputGeneration++; host.stopInput();
+    }
+    private void showReplyState() {
+        state(replyHasContent ? "PREPARING_SPEECH"
+                : SystemClock.elapsedRealtime() - replyAt >= config.waitFeedbackMs ? "WAITING_REPLY" : "THINKING");
     }
     private void cancelReply() {
         epoch++; replyPending = false; candidate = false;

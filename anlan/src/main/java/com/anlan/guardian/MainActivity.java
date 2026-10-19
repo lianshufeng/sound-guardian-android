@@ -236,7 +236,8 @@ public final class MainActivity extends Activity {
         String hint = dialogue.equals("CONTINUING_VOICE") ? "正在听你说话" : dialogue.equals("CONTINUING") ? "请继续说" : dialogue.equals("RECOGNIZING") ? "正在识别，请稍候" : input.equals("LISTENING")
                 ? understanding.voice ? "正在听你说话" : localWindow ? "请说话" : Care.activeId().isEmpty() ? "请说话" : "请说出你的回复"
                 : input.equals("CUE") ? "提示音结束后请说话" : input.equals("PREPARING") ? "正在准备，请稍候"
-                : dialogue.equals("THINKING") ? "想一想" : "小安正在回应";
+                : dialogue.equals("THINKING") ? "想一想" : dialogue.equals("WAITING_REPLY") ? "还在想，你也可以继续说"
+                : dialogue.equals("PREPARING_SPEECH") ? "正在准备声音" : "小安正在回应";
         inputHint.setText(hint);
         inputWave.phase(interacting ? input.equals("IDLE") ? wakeSpeaking ? "PREPARING" : dialogue : input
                 : conversationBar.getVisibility() == View.VISIBLE ? "ENDING" : "IDLE");

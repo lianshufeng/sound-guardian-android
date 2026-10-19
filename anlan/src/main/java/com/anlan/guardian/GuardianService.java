@@ -512,18 +512,13 @@ public final class GuardianService extends Service {
         return list;
     }
     private List<GuardianRuntime.ModelResult> modelResults(float[] scores, AppConfig config) {
-        int[] best = {-1, -1, -1};
+        List<GuardianRuntime.ModelResult> result = new ArrayList<>();
         for (int i = 0; i < scores.length; i++) {
-            if (scores[i] < .25f) continue;
-            for (int slot = 0; slot < best.length; slot++) {
-                if (best[slot] < 0 || scores[i] > scores[best[slot]]) {
-                    for (int move = best.length - 1; move > slot; move--) best[move] = best[move - 1];
-                    best[slot] = i; break;
-                }
-            }
+            if (!Float.isFinite(scores[i]) || scores[i] < .25f) continue;
+            result.add(new GuardianRuntime.ModelResult(config.labels[i], config.name(config.labels[i]), scores[i]));
         }
-        List<GuardianRuntime.ModelResult> result = new ArrayList<>(3);
-        for (int index : best) if (index >= 0) result.add(new GuardianRuntime.ModelResult(config.labels[index], config.name(config.labels[index]), scores[index]));
+        // 类别总数由共享模型契约限定；不再因名次截断已达到展示门槛的声音。
+        result.sort((left, right) -> Float.compare(right.score, left.score));
         return result;
     }
     @Override public void onDestroy() {

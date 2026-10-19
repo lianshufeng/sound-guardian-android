@@ -7,7 +7,7 @@ import org.json.JSONObject;
 final class DialogueConfig {
     final String prompt;
     final int listenMs, wakeListenMs, utteranceMs, graceMs, sessionMs, tailMs, contextChars, historyTurns, inputChars, replyChars, storyChars;
-    final int connectMs, firstContentMs, readMs, requestMs, wakeTailMs, continuationSilenceMs;
+    final int connectMs, firstContentMs, readMs, requestMs, wakeTailMs, continuationSilenceMs, waitFeedbackMs;
     DialogueConfig(Context context) {
         try {
             JSONObject j = new JSONObject(AppConfig.read(context, "dialogue.json"));
@@ -15,6 +15,7 @@ final class DialogueConfig {
             graceMs = j.getInt("decode_grace_ms"); sessionMs = j.getInt("session_ms"); tailMs = j.getInt("tail_ms");
             wakeTailMs = j.getInt("wake_tail_ms");
             continuationSilenceMs = j.getInt("continuation_silence_ms");
+            waitFeedbackMs = j.getInt("wait_feedback_ms");
             contextChars = j.getInt("context_chars"); historyTurns = j.getInt("history_turns"); inputChars = j.getInt("input_chars");
             replyChars = j.getInt("reply_chars"); storyChars = j.getInt("story_chars"); connectMs = j.getInt("connect_ms");
             firstContentMs = j.getInt("first_content_ms"); readMs = j.getInt("read_ms"); requestMs = j.getInt("request_ms");
@@ -24,6 +25,7 @@ final class DialogueConfig {
                     || wakeListenMs < listenMs || wakeListenMs > 60000 || graceMs < 0 || graceMs > 15000 || sessionMs < 60000 || sessionMs > 600000 || tailMs < 500 || tailMs > 3000
                     || wakeTailMs < 100 || wakeTailMs > tailMs
                     || continuationSilenceMs < 500 || continuationSilenceMs > 3000
+                    || waitFeedbackMs < 500 || waitFeedbackMs > 10000
                     || connectMs < 1000 || connectMs > 15000 || firstContentMs < 1000 || firstContentMs > 30000
                     || readMs < 1000 || readMs > 30000 || requestMs < firstContentMs || requestMs > 120000)
                 throw new IllegalArgumentException();

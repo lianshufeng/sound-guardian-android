@@ -137,6 +137,9 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
         }
         emit("播报期间暂停倾听"); return true;
     }
+    boolean isInputIdle() {
+        synchronized (control) { return !closed && !memoryPaused && !voice && pendingSegments == 0; }
+    }
     void retainInput(long timeoutMs) {
         synchronized (control) {
             if (!closed && !suppressed && !memoryPaused && textListener != null)
