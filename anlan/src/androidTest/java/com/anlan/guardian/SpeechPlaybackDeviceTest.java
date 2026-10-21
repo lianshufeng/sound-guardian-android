@@ -72,7 +72,7 @@ public final class SpeechPlaybackDeviceTest {
                 @Override public void onCancelled() { error.set("流式测试不应被取消"); }
             });
             assertFalse("超载片段必须整体拒收", stream.append("超过缓冲上限".repeat(100)));
-            String first = "你好，我是小安。", rest = "这是一段模拟大模型逐字输出的语音测试。我们保持同样的语速，按顺序说完。";
+            String first = "你好，我是小糖。", rest = "这是一段模拟大模型逐字输出的语音测试。我们保持同样的语速，按顺序说完。";
             for (int i = 0; i < first.length(); i++) { assertTrue(stream.append(first.substring(i, i + 1))); SystemClock.sleep(25); }
             await(() -> !spoken.isEmpty() || !error.get().isEmpty(), 60000);
             if(!error.get().isEmpty())for(InteractionTrace.Sample sample:InteractionTrace.snapshot()){
@@ -147,7 +147,7 @@ public final class SpeechPlaybackDeviceTest {
         MainActivity activity = launch();
         try {
             await(() -> GuardianRuntime.speechStatus().startsWith("已就绪"), 120000);
-            String text = "我在。我是小安，会在这里陪着你。你可以轻轻摸摸我的脸，也可以叫我的名字。听到重要的声音时，我会及时提醒你。";
+            String text = "我在。我是小糖，会在这里陪着你。你可以轻轻摸摸我的脸，也可以叫我的名字。听到重要的声音时，我会及时提醒你。";
             long previous = GuardianRuntime.speechSnapshot().id;
             reportSpeechMemory("long_speech_before");
             instrumentation.runOnMainSync(() -> SpeechPlayback.speak(text));
@@ -175,7 +175,7 @@ public final class SpeechPlaybackDeviceTest {
             await(() -> GuardianRuntime.speechStatus().startsWith("已就绪"), 120000);
             reportSpeechMemory("before_model");
             // 复用正式服务的唯一合成器，避免常驻模式下额外创建第二份FP32模型。
-            for (String text : new String[]{"你好，我在这里。", "你好，我是小安。我会在这里，安静地陪伴你。", "我会一直陪着你。"}) {
+            for (String text : new String[]{"你好，我在这里。", "你好，我是小糖。我会在这里，安静地陪伴你。", "我会一直陪着你。"}) {
                 long before=GuardianRuntime.speechSnapshot().id;
                 instrumentation.runOnMainSync(()->SpeechPlayback.speak(text));
                 await(()->GuardianRuntime.speechSnapshot().id>before&&
@@ -246,11 +246,11 @@ public final class SpeechPlaybackDeviceTest {
             output.trimMemory(); output.speak(InteractionPorts.SpeechRequest.wake(), progress);
             await(() -> completed.get() == 1 || !failure.get().isEmpty(), 15000);
             assertEquals("", failure.get());
-            output.speak("你好，小安在这里。", progress);
+            output.speak("你好，小糖在这里。", progress);
             await(() -> completed.get() == 2 || !failure.get().isEmpty(), 60000);
             assertEquals("", failure.get());
             output.trimMemory();
-            output.speak("你好，小安在这里。", progress);
+            output.speak("你好，小糖在这里。", progress);
             await(() -> completed.get() == 3 || !failure.get().isEmpty(), 60000);
             assertEquals("", failure.get());
         }
@@ -274,7 +274,7 @@ public final class SpeechPlaybackDeviceTest {
                 TextView caption = activity.findViewById(R.id.emotion_name);
                 assertEquals(View.VISIBLE, caption.getVisibility());
                 assertEquals("我在", caption.getText().toString());
-                assertEquals("小安 · 收到", activity.findViewById(R.id.face).getContentDescription());
+                assertEquals("小糖 · 收到", activity.findViewById(R.id.face).getContentDescription());
             });
             await(() -> GuardianRuntime.speechSnapshot().phase == GuardianRuntime.SpeechPhase.COMPLETE, 15000);
             assertTrue("必须等待真实播放结束", GuardianRuntime.speechSnapshot().at - started >= 100);
@@ -292,7 +292,7 @@ public final class SpeechPlaybackDeviceTest {
         try {
             await(() -> GuardianRuntime.speechStatus().startsWith("已就绪"), 120000);
             assertEquals("主动关怀应保持未自动触发", GuardianRuntime.SpeechPhase.IDLE, GuardianRuntime.speechSnapshot().phase);
-            SpeechPlayback.speak("你好，我是小安。我会在这里，安静地陪伴你。");
+            SpeechPlayback.speak("你好，我是小糖。我会在这里，安静地陪伴你。");
             await(() -> GuardianRuntime.speechSnapshot().phase == GuardianRuntime.SpeechPhase.PLAYING, 60000);
             long previous = GuardianRuntime.speechSnapshot().id;
             SpeechPlayback.speak("我在");

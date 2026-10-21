@@ -30,34 +30,34 @@
         "sha256":  "1113ed990adfb11f2ed9c60da3dbab78b7abe4d16cf656a8bcbe4f883a635dc6"
     },
     {
-        "text":  "小安，我想和你聊一会儿。",
+        "text":  "小糖，我想和你聊一会儿。",
         "format":  "s16le-mono",
         "source":  "Microsoft Huihui Desktop synthetic",
         "rate":  0,
-        "duration_ms":  5645,
+        "duration_ms":  5715,
         "name":  "chat-normal",
         "sample_rate":  16000,
-        "sha256":  "6b85b32c508d92766e1ed1b9a44681095ff7767b089d28aab198f4991416169a"
+        "sha256":  "ee8c6e61e1efb07d765b43ada5e2d36b965ee5cc8aced9650981cd28fd59f6be"
     },
     {
-        "text":  "小安，我想和你聊一会儿。",
+        "text":  "小糖，我想和你聊一会儿。",
         "format":  "s16le-mono",
         "source":  "Microsoft Huihui Desktop synthetic",
         "rate":  2,
-        "duration_ms":  4935.6875,
+        "duration_ms":  4991.0625,
         "name":  "chat-fast",
         "sample_rate":  16000,
-        "sha256":  "ea12a81b20bd66fe24302f1f6392ee522005ce51e6ddb7791c1acb39abe352ba"
+        "sha256":  "bd8f57f567c0530485cc2d23b6f2d0a3c4427e1d4189a4adc0353907dcd8816d"
     },
     {
-        "text":  "小安，我想和你聊一会儿。",
+        "text":  "小糖，我想和你聊一会儿。",
         "format":  "s16le-mono",
         "source":  "Microsoft Huihui Desktop synthetic",
         "rate":  -2,
-        "duration_ms":  6551,
+        "duration_ms":  6633,
         "name":  "chat-slow",
         "sample_rate":  16000,
-        "sha256":  "a5d13769a9f789c4953e923bccd39807cae2d2be6875af17ce994e687ba22252"
+        "sha256":  "51bd5ddc2bc0476aae1151c4619b50819830158a08db37e65e3b61773314ed75"
     },
     {
         "text":  "请给我讲一个简短的小故事。",

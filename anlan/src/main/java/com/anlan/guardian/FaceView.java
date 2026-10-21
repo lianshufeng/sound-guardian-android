@@ -10,7 +10,7 @@ import android.view.MotionEvent;
 import android.os.SystemClock;
 import java.util.Random;
 
-/** 安澜的极简脸。几何参数随尺寸缩放，不使用位图，适合横屏设备常驻显示。 */
+/** 红糖的极简脸。几何参数随尺寸缩放，不使用位图，适合横屏设备常驻显示。 */
 public final class FaceView extends View {
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private Emotion emotion = Emotion.CALM;
@@ -51,7 +51,7 @@ public final class FaceView extends View {
     private final RectF bounds = new RectF();
 
     public FaceView(Context context) {
-        super(context); setContentDescription("小安的表情");
+        super(context); setContentDescription("小糖的表情");
         constrained = ResourceBudget.read(context).constrained;
         nextBlink = SystemClock.elapsedRealtime() + 3000;
     }
@@ -65,7 +65,7 @@ public final class FaceView extends View {
             target = pose(emotion);
             target[0] *= variant == 1 ? .94f : variant == 2 ? 1.05f : 1;
             target[4] *= variant == 1 ? 1.10f : variant == 2 ? .90f : 1;
-            setContentDescription("小安 · " + emotion.title);
+            setContentDescription("小糖 · " + emotion.title);
         }
         invalidate();
     }

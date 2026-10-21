@@ -7,7 +7,7 @@ import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
 
-/** 安澜自绘线条图标，不下载图片，不依赖字体或 Emoji。 */
+/** 红糖自绘线条图标，不下载图片，不依赖字体或 Emoji。 */
 final class WeatherIconDrawable extends Drawable {
     private final WeatherForecast.Condition condition;
     private final boolean day;

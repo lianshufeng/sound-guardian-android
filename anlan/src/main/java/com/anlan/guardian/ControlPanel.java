@@ -24,7 +24,7 @@ final class ControlPanel {
     }
     void show() {
         String[] items = {"设置", "预览", "设备状态", "AI模型", "关于"};
-        drawer("小安 · 智能守护", items, false, which -> {
+        drawer("小糖 · 智能守护", items, false, which -> {
             switch (which) {
                 case 0: settings(); break;
                 case 1: previews(); break;
@@ -129,9 +129,9 @@ final class ControlPanel {
         activity.showDrawer(title, items, nested, this::show, select);
     }
     private void about() {
-        TextView body = text("小安是一款拟人化的智能守护音响，陪伴在你的身边，关注日常环境变化，用自然、温和的方式回应生活。\n\n安澜，让守护更有温度。", 17, 0xFFD2E5DC);
+        TextView body = text("小糖是一款拟人化的智能守护音响，陪伴在你的身边，关注日常环境变化，用自然、温和的方式回应生活。\n\n红糖，让守护更有温度。", 17, 0xFFD2E5DC);
         body.setGravity(Gravity.TOP); body.setPadding(dp(24), dp(28), dp(24), 0);
-        activity.showDrawerPage("关于安澜", true, this::show, body);
+        activity.showDrawerPage("关于红糖", true, this::show, body);
     }
     private void history() {
         TextView body = text("正在读取…", 15, 0xFFD2E5DC); body.setGravity(Gravity.TOP); body.setPadding(dp(24), dp(24), dp(24), 0);
@@ -152,7 +152,7 @@ final class ControlPanel {
     }
     private void brightness() {
         LinearLayout body = new LinearLayout(activity); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(dp(24),dp(12),dp(24),dp(18));
-        TextView note = text("仅调整安澜窗口亮度\n打盹只改变表情，监听持续工作。", 14, 0xFF8BA69C); note.setLineSpacing(dp(6), 1); body.addView(note);
+        TextView note = text("仅调整红糖窗口亮度\n打盹只改变表情，监听持续工作。", 14, 0xFF8BA69C); note.setLineSpacing(dp(6), 1); body.addView(note);
         SeekBar bar = new SeekBar(activity); bar.setMax(90); bar.setProgress(Math.round(activity.getWindow().getAttributes().screenBrightness*100)-10); body.addView(bar);
         bar.setOnTouchListener((view, event) -> {
             SeekBar seekBar = (SeekBar)view;

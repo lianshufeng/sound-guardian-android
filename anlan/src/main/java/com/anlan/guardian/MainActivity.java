@@ -94,8 +94,8 @@ public final class MainActivity extends Activity {
             return insets;
         });
         LinearLayout header = new LinearLayout(this); header.setGravity(Gravity.CENTER_VERTICAL);
-        TextView title = text("安澜", 18, 0xFFA6C1B8); header.addView(title, new LinearLayout.LayoutParams(-2, dp(44))); title.setGravity(Gravity.CENTER_VERTICAL);
-        title.setContentDescription("安澜，点击开始与小安对话");
+        TextView title = text("红糖", 18, 0xFFA6C1B8); header.addView(title, new LinearLayout.LayoutParams(-2, dp(44))); title.setGravity(Gravity.CENTER_VERTICAL);
+        title.setContentDescription("红糖，点击开始与小糖对话");
         title.setOnClickListener(v -> { try { Conversation.start(); } catch (RuntimeException error) { android.widget.Toast.makeText(this,"请先开启守护并配置AI模型",android.widget.Toast.LENGTH_SHORT).show(); } });
         header.setId(R.id.header);
         soundLevelName = text("", 10, 0xFF718B82); soundLevelName.setId(R.id.sound_level); soundLevelName.setSingleLine(true); soundLevelName.setIncludeFontPadding(false);
@@ -214,7 +214,7 @@ public final class MainActivity extends Activity {
         boolean waking = speech.request != null && speech.request.source == InteractionPorts.SpeechRequest.Source.WAKE
                 && speech.phase == GuardianRuntime.SpeechPhase.PREPARING;
         emotionName.setText(speechCaption ? speech.request.text : careListening ? "正在听你回复"
-                : waking ? "小安已醒，正在准备回应" : legacyWakeCaption ? state.message : state.emotion.title);
+                : waking ? "小糖已醒，正在准备回应" : legacyWakeCaption ? state.message : state.emotion.title);
         emotionName.setVisibility(showEmotionName || speechCaption || legacyWakeCaption || careListening || waking ? View.VISIBLE : View.GONE);
         boolean wakeSpeaking = speech.request != null && speech.request.source == InteractionPorts.SpeechRequest.Source.WAKE
                 && (speech.phase == GuardianRuntime.SpeechPhase.PREPARING || speech.phase == GuardianRuntime.SpeechPhase.PLAYING);
@@ -237,7 +237,7 @@ public final class MainActivity extends Activity {
                 ? understanding.voice ? "正在听你说话" : localWindow ? "请说话" : Care.activeId().isEmpty() ? "请说话" : "请说出你的回复"
                 : input.equals("CUE") ? "提示音结束后请说话" : input.equals("PREPARING") ? "正在准备，请稍候"
                 : dialogue.equals("THINKING") ? "想一想" : dialogue.equals("WAITING_REPLY") ? "还在想，你也可以继续说"
-                : dialogue.equals("PREPARING_SPEECH") ? "正在准备声音" : "小安正在回应";
+                : dialogue.equals("PREPARING_SPEECH") ? "正在准备声音" : "小糖正在回应";
         inputHint.setText(hint);
         inputWave.phase(interacting ? input.equals("IDLE") ? wakeSpeaking ? "PREPARING" : dialogue : input
                 : conversationBar.getVisibility() == View.VISIBLE ? "ENDING" : "IDLE");
@@ -428,7 +428,7 @@ public final class MainActivity extends Activity {
         if (code == 11 && results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) WeatherRepository.get(this).useAutomatic();
         if (code == 9) {
             if (results.length > 0 && results[0] == PackageManager.PERMISSION_GRANTED) startListening();
-            else { startupAttempted = false; behavior.fail("需要麦克风权限才能守护", SystemClock.elapsedRealtime()); render(); new android.app.AlertDialog.Builder(this).setMessage("请允许安澜使用麦克风，小安才能自动开始守护。").setPositiveButton("打开设置", (d,w) -> startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:"+getPackageName())))).setNegativeButton("稍后",null).show(); }
+            else { startupAttempted = false; behavior.fail("需要麦克风权限才能守护", SystemClock.elapsedRealtime()); render(); new android.app.AlertDialog.Builder(this).setMessage("请允许红糖使用麦克风，小糖才能自动开始守护。").setPositiveButton("打开设置", (d,w) -> startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:"+getPackageName())))).setNegativeButton("稍后",null).show(); }
         }
     }
 }

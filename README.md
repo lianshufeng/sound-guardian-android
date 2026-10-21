@@ -33,10 +33,10 @@ python tools/model_tool.py --install
 - 应用启动会验证固定哈希和输入输出契约；回退官方版本可重新执行 `--install`。
 - 权重由脚本获取，不提交 Git；manifest、metadata、标签和中文映射提交源码库。Gradle 不自动下载模型，依赖首次解析仍需要网络。
 - `tools/get_yamnet.ps1` 是已停用的早期下载脚本，避免误写旧应用 assets；当前流程请使用 `model_tool.py --install`，或 `anlan/tools/prepare-model.ps1`。
-- 安澜唤醒依赖使用 `tools/prepare-wakeword.ps1` 准备；运行库与 KWS 模型不提交 Git，脚本会校验固定 SHA-256。唤醒模型和“小安”关键词配置统一位于 `core/src/main/assets/wakeword/`。
-- 中文本地 TTS 使用 sherpa-onnx Kokoro v1.1-zh FP32 和 `tools/prepare-tts.ps1` 准备（包含唤醒依赖）；模型与语言数据统一在 `core/src/main/assets/tts/` 维护。INT8 在 ARM64 真机出现无效样本，暂不启用。安澜所有业务播报统一走 `SpeechPlayback.speak(...)`，唤醒时声音与“我在”字幕同步；首批主动关怀通过统一请求与回复方法接入，默认关闭，见 [关怀实施记录](anlan/docs/care-implementation.md)。
-- 中文文字及声音情绪识别继续使用同一 sherpa-onnx，执行 `tools/prepare-understanding.ps1` 准备 SenseVoice INT8 和 Silero VAD；资产统一在 `core/src/main/assets/understanding/`，构建执行 `core:verifyUnderstandingAssets`。安澜新增触摸互动和可选持续陪伴倾听，具体行为与性能验证见 [交互说明](anlan/docs/interaction.md)。
-- 两款应用按启用能力打包：原 App 只保留声音守护资源，排除唤醒、TTS 和语音理解模型，Debug APK 约 22 MiB；安澜打包语音资源。源码仍共享同一 core，不能在应用模块中复制模型。
+- 红糖唤醒依赖使用 `tools/prepare-wakeword.ps1` 准备；运行库与 KWS 模型不提交 Git，脚本会校验固定 SHA-256。唤醒模型和“小糖”关键词配置统一位于 `core/src/main/assets/wakeword/`。
+- 中文本地 TTS 使用 sherpa-onnx Kokoro v1.1-zh FP32 和 `tools/prepare-tts.ps1` 准备（包含唤醒依赖）；模型与语言数据统一在 `core/src/main/assets/tts/` 维护。INT8 在 ARM64 真机出现无效样本，暂不启用。红糖所有业务播报统一走 `SpeechPlayback.speak(...)`，唤醒时声音与“我在”字幕同步；首批主动关怀通过统一请求与回复方法接入，默认关闭，见 [关怀实施记录](anlan/docs/care-implementation.md)。
+- 中文文字及声音情绪识别继续使用同一 sherpa-onnx，执行 `tools/prepare-understanding.ps1` 准备 SenseVoice INT8 和 Silero VAD；资产统一在 `core/src/main/assets/understanding/`，构建执行 `core:verifyUnderstandingAssets`。红糖新增触摸互动和可选持续陪伴倾听，具体行为与性能验证见 [交互说明](anlan/docs/interaction.md)。
+- 两款应用按启用能力打包：原 App 只保留声音守护资源，排除唤醒、TTS 和语音理解模型，Debug APK 约 22 MiB；红糖打包语音资源。源码仍共享同一 core，不能在应用模块中复制模型。
 
 ## 打开与构建
 用 Android Studio Jellyfish（支持 AGP 8.4）或更新版本打开仓库根目录，不能只打开 `app/`。固定环境：Gradle Wrapper 8.6、AGP 8.4.2、compile/target SDK 34、最低 Android 8.0（API 26）。建议 JDK 17；本机也使用 JDK 21 完成过构建。项目使用 Java 17，无 Kotlin 编译插件；Kotlin BOM 1.9.24 用于统一传递依赖。
@@ -74,11 +74,11 @@ Debug APK：`app/build/outputs/apk/debug/app-debug.apk`。本次用于转发的�
 - 原始录音不默认保存；目前没有测试录音保存/导出/清理功能，也没有反馈标注入口。
 
 ## 工程约定
-工程包含 `:app`（原应用）、`:anlan`（安澜）和 Android Library `:core`（共享声音引擎）。两款应用都依赖 `:core`，包名、界面、通知和历史数据独立。
+工程包含 `:app`（原应用）、`:anlan`（红糖）和 Android Library `:core`（共享声音引擎）。两款应用都依赖 `:core`，包名、界面、通知和历史数据独立。
 
 `app/` 与 `anlan/` 为并列应用模块，均采用 `build.gradle` + `src/` 结构，统一使用仓库根目录的 Gradle 配置和 Wrapper。分别运行 `:app:assembleDebug` 和 `:anlan:assembleDebug` 构建，APK 分别输出到 `app/build/outputs/apk/debug/` 和 `anlan/build/outputs/apk/debug/`。
 
-两款应用通过 `:core` 共享模型与声音引擎。YAMNet 模型、原生标签、中文映射、模型元数据、`event_rules.json`、音频参数、`YamnetClassifier`、`EventEngine` 和 `AppConfig` 只能在 `core/` 维护；App 不得复制或覆盖这些资源和逻辑。两个 App 可以分别实现界面、前台服务外壳、事件展示、历史记录和产品交互；安澜专属的表情与行为配置维护在 `anlan/src/main/assets/behavior.json`。共享能力发生变化时，必须同时构建并验证 `:app` 和 `:anlan`。
+两款应用通过 `:core` 共享模型与声音引擎。YAMNet 模型、原生标签、中文映射、模型元数据、`event_rules.json`、音频参数、`YamnetClassifier`、`EventEngine` 和 `AppConfig` 只能在 `core/` 维护；App 不得复制或覆盖这些资源和逻辑。两个 App 可以分别实现界面、前台服务外壳、事件展示、历史记录和产品交互；红糖专属的表情与行为配置维护在 `anlan/src/main/assets/behavior.json`。共享能力发生变化时，必须同时构建并验证 `:app` 和 `:anlan`。
 
 模型权重、原生标签、中文映射、`event_rules.json` 仅在 `core/src/main/assets/` 维护；推理器、配置加载、事件确认与音频参数仅在 `core/src/main/java/com/soundguardian/core/` 维护。`core:verifySharedAssets` 在构建前校验模型哈希、标签和规则，并禁止 App 的 assets 覆盖同名文件。修改共享规则后需要重新打包两款应用；已安装 APK 不会自动更新。
 

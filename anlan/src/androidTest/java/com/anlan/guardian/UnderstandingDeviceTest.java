@@ -220,15 +220,15 @@ public final class UnderstandingDeviceTest {
             android.view.View face = activity.findViewById(R.id.face);
             sendTouch(face, android.view.MotionEvent.ACTION_DOWN, .5f);
             SystemClock.sleep(1000);
-            instrumentation.runOnMainSync(() -> assertEquals("小安 · 害羞", face.getContentDescription()));
+            instrumentation.runOnMainSync(() -> assertEquals("小糖 · 害羞", face.getContentDescription()));
             sendTouch(face, android.view.MotionEvent.ACTION_CANCEL, .5f);
             sendTouch(face, android.view.MotionEvent.ACTION_DOWN, .5f);
             SystemClock.sleep(300);
             sendTouch(face, android.view.MotionEvent.ACTION_MOVE, .8f);
             sendTouch(face, android.view.MotionEvent.ACTION_MOVE, .2f);
-            instrumentation.runOnMainSync(() -> assertEquals("小安 · 蹭手", face.getContentDescription()));
+            instrumentation.runOnMainSync(() -> assertEquals("小糖 · 蹭手", face.getContentDescription()));
             sendTouch(face, android.view.MotionEvent.ACTION_CANCEL, .2f);
-            instrumentation.runOnMainSync(() -> assertNotEquals("小安 · 蹭手", face.getContentDescription()));
+            instrumentation.runOnMainSync(() -> assertNotEquals("小糖 · 蹭手", face.getContentDescription()));
             assertEquals(GuardianRuntime.Status.LISTENING, GuardianRuntime.snapshot().status);
         } finally {
             app.stopService(new android.content.Intent(app, GuardianService.class));

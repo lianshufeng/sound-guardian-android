@@ -3,7 +3,7 @@ package com.anlan.guardian;
 import android.app.ActivityManager;
 import android.content.Context;
 
-/** 安澜的设备调度预算；不改变共享模型、识别阈值或用户启用的能力。 */
+/** 红糖的设备调度预算；不改变共享模型、识别阈值或用户启用的能力。 */
 final class ResourceBudget {
     private static final HeavyWorkLimiter HEAVY=new HeavyWorkLimiter();
     final boolean constrained;

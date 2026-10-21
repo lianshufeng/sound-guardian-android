@@ -8,8 +8,8 @@ public final class SpeechTextBufferTest {
 
     @Test public void deltaBoundariesDoNotBecomeSentenceBoundaries() {
         SpeechTextBuffer input = buffer();
-        input.append("你", 0); input.append("好，小", 10); input.append("安。再见！", 20);
-        assertEquals("你好，小安。", input.poll(20));
+        input.append("你", 0); input.append("好，小", 10); input.append("糖。再见！", 20);
+        assertEquals("你好，小糖。", input.poll(20));
         assertEquals("再见！", input.poll(20));
         assertNull(input.poll(20)); input.end(); assertTrue(input.exhausted());
     }

@@ -24,7 +24,7 @@ final class WakeWordWorker implements InteractionPorts.WakeWordDetector {
         worker = new Thread(() -> {
             try (SherpaWakeWord detector = new SherpaWakeWord(app)) {
                 if (closed) return;
-                status.accept("已就绪 · 小安");
+                status.accept("已就绪 · 小糖");
                 if (BuildConfig.DEBUG) android.util.Log.i("AnlanWake", "ready");
                 long nextWake = 0, lastReport=SystemClock.elapsedRealtime(),decodedSamples=0,maxDecodeMs=0;
                 while (!closed) {

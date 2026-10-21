@@ -178,7 +178,7 @@ final class ConversationCoordinator implements AutoCloseable, Conversation.Endpo
         if (action == ConversationRouter.Action.SNOOZE) { app.getSharedPreferences("care", Context.MODE_PRIVATE).edit().putLong("snooze_until", System.currentTimeMillis() + 900000).apply(); say("好的，十五分钟内不作普通关怀提醒。", false); return; }
         if (action == ConversationRouter.Action.BEDTIME) { app.getSharedPreferences("care",0).edit().putString("bedtime_skip_day",new java.text.SimpleDateFormat("yyyy-MM-dd",Locale.ROOT).format(new java.util.Date())).apply(); say("好的，今晚不再提醒你就寝。", false); return; }
         if (action == ConversationRouter.Action.TIME) { java.util.Calendar now = java.util.Calendar.getInstance(); say(String.format(Locale.CHINA, "现在是%d点%d分。", now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE)), true); return; }
-        if (action == ConversationRouter.Action.IDENTITY) { say("我是小安，陪你聊聊天，也留意身边的声音。", true); return; }
+        if (action == ConversationRouter.Action.IDENTITY) { say("我是小糖，陪你聊聊天，也留意身边的声音。", true); return; }
         if (action == ConversationRouter.Action.WEATHER) { say(weatherContext(), true); return; }
         if (action == ConversationRouter.Action.HELP) { say("我听到你需要帮助。目前我还不能替你联系他人，你愿意告诉我发生了什么吗？", true); return; }
         askModel(text);

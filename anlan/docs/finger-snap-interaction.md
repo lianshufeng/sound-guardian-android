@@ -8,9 +8,9 @@
 - 共享 `core/src/main/assets/event_rules.json` 第 19 项规则：开启 0.20、关闭 0.12、`hits=2`、`window_ms=15000`、`count_edges=true`、`continuous_ms=1000`、释放 650 ms、合并 900 ms。针对真人反馈的难触发问题，仅将开启阈值由 0.30 调低到 0.20，允许较弱的分类证据参与确认；参数仍为未校准启发式，真人检出率与敲击、鼓掌等混淆声音误触发尚待本次真机验证，历史验收不代表本次通过。
 - 支持两条确认分支：两次独立响指仍按回落后再次达到开启阈值计数；连续响指无需分数回落，只要连续有效帧均达到开启阈值且跨度至少 1 秒即可确认片段。当前约 480 ms 步长下通常第四帧、跨度约 1.44 秒时满足，不能保证极短的两声也形成足够证据。
 - 单个声响可能覆盖约 0.975 秒模型窗口；连续阈值高于该窗口，减少同一声的重叠帧误触发。连续片段不等于精确次数，也不能排除混响或电视来源。有效帧低于开启阈值、相邻帧间隔超过一个模型窗口或时间倒退会重置连续证据；停止服务同时清空两个分支。
-- 15 秒边界包含在独立计数窗口内，过期证据淘汰，确认后消费本轮独立证据。连续片段活动期间保持同一事件，安澜按事件 ID 只回应一次；释放/合并仍沿用共享引擎。其他规则未开启连续分支，采用原有帧命中方式。
+- 15 秒边界包含在独立计数窗口内，过期证据淘汰，确认后消费本轮独立证据。连续片段活动期间保持同一事件，红糖按事件 ID 只回应一次；释放/合并仍沿用共享引擎。其他规则未开启连续分支，采用原有帧命中方式。
 - 计数属于共享 EventEngine，窗口仅保留时间戳，不把 15 秒完整分数保存到上下文；普通分数上下文仍是 3 秒。已确认事件仍按既有方式进入声音历史，原 App 只展示事件。
-- 安澜对已确认响指显示 HAPPY 表情，通过 `SpeechPlayback.speak(SpeechRequest.fingerSnaps(eventId))` 说出“这个节奏让我也开心起来啦！”，来源为 INTERACTION，仍由唯一 LocalSpeechOutput 合成播放。字幕仅在真实播放期间显示，合成准备时不提前显示为正在播报，播报时保持 HAPPY 表情。
+- 红糖对已确认响指显示 HAPPY 表情，通过 `SpeechPlayback.speak(SpeechRequest.fingerSnaps(eventId))` 说出“这个节奏让我也开心起来啦！”，来源为 INTERACTION，仍由唯一 LocalSpeechOutput 合成播放。字幕仅在真实播放期间显示，合成准备时不提前显示为正在播报，播报时保持 HAPPY 表情。
 - 这是明确手势互动，不需要打开主动关怀或持续文字倾听；不进入 ASK，不等待回复，不做远程通信。真实触发在服务侧执行，不依赖页面，页面重建不重播。每个采集会话有界去重同一确认事件，投递携带服务会话标记，旧回调不能影响新会话。
 - 正在播报、关怀会话、近期讲话、唤醒回应及播报尾音期不插话；高优先级事件可阻止或中断。忙碌期间仅保留表情，不积压补播。确认事件到主线程已超过两秒也不补播；服务停止取消现有播报。
 - 短声结束后的表情沿用 `behavior.json` 的 `event_hold_ms=5500`；实际播放期间保持开心表情，高优先级事件仍优先。没有改写声音情绪标签，响指本身不证明人的真实心理状态。
@@ -24,8 +24,8 @@
 
 ## 首次三次规则视觉版本验证（历史记录，不代表当前两次规则）
 
-- 四项共享资产任务、两款 Debug 构建、core 15 项和安澜 59 项单元测试、安澜 lint 通过。原 App 单元任务 NO-SOURCE。日志 `evaluation/finger-snap-build.log`。
-- Android 9 / API 28 / x86_64：安澜 GuardianDeviceTest 10 项通过，含真实共享配置的三次边沿→事件→行为，以及页面预览短句可见；原 App 1 项共享配置与实际推理通过。日志 `evaluation/finger-snap-anlan-device.log`、`evaluation/finger-snap-original-device.log`。
+- 四项共享资产任务、两款 Debug 构建、core 15 项和红糖 59 项单元测试、红糖 lint 通过。原 App 单元任务 NO-SOURCE。日志 `evaluation/finger-snap-build.log`。
+- Android 9 / API 28 / x86_64：红糖 GuardianDeviceTest 10 项通过，含真实共享配置的三次边沿→事件→行为，以及页面预览短句可见；原 App 1 项共享配置与实际推理通过。日志 `evaluation/finger-snap-anlan-device.log`、`evaluation/finger-snap-original-device.log`。
 - 新单元测试覆盖一/两次静默、持续高分不重复、15 秒边界、过期淘汰、服务停止清空和高优先级警报覆盖；既有事件合并与历史回归继续通过。
 - 两个实际 APK 的 6 / 392 项共享资产与 core 源文件 SHA-256 一致，原 App 不含 tts/understanding/wakeword。实际大小为 22,676,162 / 795,252,375 字节，已重新安装当前 Android 9 设备。证据 `evaluation/finger-snap-assets.json`。
 - 额外运行原 App lint 失败，4 处现存 `setOrientation(1)` 引发 WrongConstant（DebugActivity 两处、GuardianDashboard 一处、RadarDashboard 一处）；未用忽略配置绕过，记录在 `evaluation/finger-snap-final-build.log`。
@@ -41,16 +41,16 @@
 
 ## 两次规则调整的验证（历史）
 
-按用户要求从三次改为 15 秒两次，已同步共享规则、原有边界与配置用例、菜单目录、调试入口、README 和实施记录。四项共享资产校验、两款 Debug 构建、core 15 项及安澜 59 项单元测试、安澜 lint 通过，日志 `evaluation/two-snaps-build.log`；原 App 单元任务 NO-SOURCE。
+按用户要求从三次改为 15 秒两次，已同步共享规则、原有边界与配置用例、菜单目录、调试入口、README 和实施记录。四项共享资产校验、两款 Debug 构建、core 15 项及红糖 59 项单元测试、红糖 lint 通过，日志 `evaluation/two-snaps-build.log`；原 App 单元任务 NO-SOURCE。
 
-两款 APK 共享资产 6 / 392 项与 core 源文件 SHA-256 全部一致，原 App 仍排除三个语音扩展目录，见 `evaluation/two-snaps-assets.json`。两款新版均已安装 vivo V2505A；安澜共享配置与模型推理 2 项、原 App 共享配置与推理 1 项设备测试通过，日志 `evaluation/two-snaps-anlan-device.log`、`evaluation/two-snaps-original-device.log`。本次未进行真人响指识别率或完整语音可听验收，不沿用历史三次规则结论；修改文件已按 UTF-8 无 BOM 回读，中文正常。
+两款 APK 共享资产 6 / 392 项与 core 源文件 SHA-256 全部一致，原 App 仍排除三个语音扩展目录，见 `evaluation/two-snaps-assets.json`。两款新版均已安装 vivo V2505A；红糖共享配置与模型推理 2 项、原 App 共享配置与推理 1 项设备测试通过，日志 `evaluation/two-snaps-anlan-device.log`、`evaluation/two-snaps-original-device.log`。本次未进行真人响指识别率或完整语音可听验收，不沿用历史三次规则结论；修改文件已按 UTF-8 无 BOM 回读，中文正常。
 
 ## 连续片段优化的本次验证
 
 连续方式与独立方式并存，未降低 0.30 开启分数；菜单“预览 → 场景”、模拟入口“开心响指（连续或两次）”、两款 README、实施记录和开发规范已同步。原 App 调试页也展示连续确认条件。
 
-四项共享资产任务、两个 Debug 构建、core 17 项及安澜 59 项单元测试、安澜 lint 均通过，原 App 单元任务 NO-SOURCE。日志 `evaluation/continuous-snaps-build.log`。新增连续序列用例验证不回落也可确认、前三帧不足一秒不确认、长片段只产生一个活动事件、低分/帧间断/停止后清空；原有两次独立计数和 15 秒边界测试继续通过。这里用人工分数序列验证算法，不等于声学准确率。
+四项共享资产任务、两个 Debug 构建、core 17 项及红糖 59 项单元测试、红糖 lint 均通过，原 App 单元任务 NO-SOURCE。日志 `evaluation/continuous-snaps-build.log`。新增连续序列用例验证不回落也可确认、前三帧不足一秒不确认、长片段只产生一个活动事件、低分/帧间断/停止后清空；原有两次独立计数和 15 秒边界测试继续通过。这里用人工分数序列验证算法，不等于声学准确率。
 
-两款新版正式 APK 已安装当前 vivo V2505A；6 / 392 项共享资产均与 core 源文件 SHA-256 一致，原 App 不含三个语音扩展目录。实际大小分别 22,658,732 / 795,290,686 字节，证据 `evaluation/continuous-snaps-assets.json`。测试 APK 更新在安装器阶段未完成，已明确取消该次更新；使用手机原有测试包对新版正式 APK 执行安澜配置和模型推理 2 项、原 App 配置和推理 1 项，均通过，日志 `evaluation/continuous-snaps-device.log`、`evaluation/continuous-snaps-original-device.log`。新增连续片段的设备用例仅编译通过，未执行；未重跑完整设备回归或真人连续响指声学/可听验收。
+两款新版正式 APK 已安装当前 vivo V2505A；6 / 392 项共享资产均与 core 源文件 SHA-256 一致，原 App 不含三个语音扩展目录。实际大小分别 22,658,732 / 795,290,686 字节，证据 `evaluation/continuous-snaps-assets.json`。测试 APK 更新在安装器阶段未完成，已明确取消该次更新；使用手机原有测试包对新版正式 APK 执行红糖配置和模型推理 2 项、原 App 配置和推理 1 项，均通过，日志 `evaluation/continuous-snaps-device.log`、`evaluation/continuous-snaps-original-device.log`。新增连续片段的设备用例仅编译通过，未执行；未重跑完整设备回归或真人连续响指声学/可听验收。
 
 本次相关文本均按 UTF-8 无 BOM 回读，中文正常；当前结论不沿用此前仅支持独立计数的验收结果。

@@ -11,11 +11,12 @@ try {
     $format = New-Object System.Speech.AudioFormat.SpeechAudioFormatInfo(16000, [System.Speech.AudioFormat.AudioBitsPerSample]::Sixteen, [System.Speech.AudioFormat.AudioChannel]::Mono)
     # Unicode escapes keep this script readable by Windows PowerShell 5.1 without a BOM.
     $phrases = @{
-        'positive' = (-join @([char]0x5C0F, [char]0x5B89))
+        'positive' = (-join @([char]0x5C0F, [char]0x7CD6))
+        'old-keyword' = (-join @([char]0x5C0F, [char]0x5B89))
         'negative' = (-join @([char]0x4ECA, [char]0x5929, [char]0x5929, [char]0x6C14, [char]0x4E0D, [char]0x9519))
         'similar' = (-join @([char]0x5C0F, [char]0x738B, [char]0xFF0C, [char]0x5C0F, [char]0x5F20))
-        'positive-fast' = (-join @([char]0x5C0F, [char]0x5B89))
-        'positive-faster' = (-join @([char]0x5C0F, [char]0x5B89))
+        'positive-fast' = (-join @([char]0x5C0F, [char]0x7CD6))
+        'positive-faster' = (-join @([char]0x5C0F, [char]0x7CD6))
         'negative-fast' = (-join @([char]0x4ECA, [char]0x5929, [char]0x5929, [char]0x6C14, [char]0x4E0D, [char]0x9519))
         'similar-fast' = (-join @([char]0x5C0F, [char]0x738B, [char]0xFF0C, [char]0x5C0F, [char]0x5F20))
     }

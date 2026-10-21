@@ -49,7 +49,7 @@ public final class AiDialogueDeviceTest {
         AiSettings.Profile profile=profile(); CountDownLatch finished=new CountDownLatch(1); AtomicReference<String> error=new AtomicReference<>("");
         List<String> chunks=Collections.synchronizedList(new ArrayList<>()); long start=SystemClock.elapsedRealtime(); long[] first={0};
         try(OpenAiCompatibleAgent client=new OpenAiCompatibleAgent(profile,new DialogueConfig(app))) {
-            List<InteractionPorts.DialogueMessage> messages=new ArrayList<>(); messages.add(new InteractionPorts.DialogueMessage("system","你是小安，温暖自然的智能守护音箱。只回答一至两句中文，总计不超过60字，不追问。")); messages.add(new InteractionPorts.DialogueMessage("user","今天终于做完了一件拖了很久的事，感觉好轻松。"));
+            List<InteractionPorts.DialogueMessage> messages=new ArrayList<>(); messages.add(new InteractionPorts.DialogueMessage("system","你是小糖，温暖自然的智能守护音箱。只回答一至两句中文，总计不超过60字，不追问。")); messages.add(new InteractionPorts.DialogueMessage("user","今天终于做完了一件拖了很久的事，感觉好轻松。"));
             client.stream("runtime-smoke",messages,180,new InteractionPorts.DialogueAgent.Reply(){
                 public void onDelta(String text) { if(first[0]==0) first[0]=SystemClock.elapsedRealtime()-start; chunks.add(text); }
                 public void onComplete(String reason) { finished.countDown(); }

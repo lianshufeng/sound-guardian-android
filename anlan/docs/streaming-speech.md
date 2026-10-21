@@ -1,6 +1,6 @@
 # 流式文字播报接入与验收
 
-本文描述统一流式文字输入与本地播报。最初阶段未连接网络；现由安澜应用层 AI 对话复用该入口，真实接口及当前验收见 [AI 对话](ai-dialogue-development-plan.md)，以下历史结果保留原日期。
+本文描述统一流式文字输入与本地播报。最初阶段未连接网络；现由红糖应用层 AI 对话复用该入口，真实接口及当前验收见 [AI 对话](ai-dialogue-development-plan.md)，以下历史结果保留原日期。
 
 ## 统一入口
 
@@ -18,7 +18,7 @@ InteractionPorts.SpeechStream stream = SpeechPlayback.openStream(
             @Override public void onError(String message) { /* 明确报告中断，停止上游 */ }
         });
 
-boolean accepted = stream.append("你好，我是小安。");
+boolean accepted = stream.append("你好，我是小糖。");
 // accepted=false：整片段未接收，必须保留该片段并暂停上游，待缓冲有空间再重试。
 // 单个片段超过配置容量时须先拆小；不能反复重试同一个超大片段。
 stream.end();       // 上游正常结束；播放剩余正文后才回调 onComplete。
@@ -78,8 +78,8 @@ adb shell am instrument -w -r -e class 'com.anlan.guardian.SpeechPlaybackDeviceT
 
 ## 本轮执行状态（2026-10-17）
 
-- 已通过：core 12 项、安澜 39 项单元测试，共 51 项（含本次新增 16 项）；两款 Debug 构建、测试 APK 构建、安澜 lint 和四项共享资产校验。
-- 已校验：原 App 6 项、安澜 392 项共享资产的 APK 内 SHA-256 均与源文件一致；原 App 未包含 TTS、唤醒、理解目录。安澜 APK 约 758 MiB，资源体积未因流式功能明显增加。
+- 已通过：core 12 项、红糖 39 项单元测试，共 51 项（含本次新增 16 项）；两款 Debug 构建、测试 APK 构建、红糖 lint 和四项共享资产校验。
+- 已校验：原 App 6 项、红糖 392 项共享资产的 APK 内 SHA-256 均与源文件一致；原 App 未包含 TTS、唤醒、理解目录。红糖 APK 约 758 MiB，资源体积未因流式功能明显增加。
 - 此前安装因设备断开失败；恢复连接后新版已安装，vivo V2505A / Android 16 / ARM64 上述 3 项流式设备测试及唤醒播报回归通过，共 4 项、耗时 39.416 秒。增量首句在 end 前播放、字幕及顺序、新旧会话替换、普通播报替换及服务关闭取消均通过；可听体验仍须人工确认。
 - 此次打开流到首段开始播放回调约 2640 毫秒；首段及结束阶段 PSS 分别为 676,805 / 726,641 KiB，native 已分配为 590,977 / 662,423 KiB。这是守护共存下的阶段快照，结束时模型尚处于空闲保留期，不是峰值或释放后内存；不作为 4 GB 低端真机验收结论。
 - 原 App 本轮仅完成构建及资产校验；共享模型未变，新的设备推理复验未执行。后台采样冻结等历史结论不能替代本轮流式验收。

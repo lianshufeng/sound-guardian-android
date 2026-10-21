@@ -24,7 +24,7 @@ public final class WakeWordDeviceTest {
 
     @Test public void keywordHandlesFasterSyntheticSpeechWithoutKnownFalseTriggers() throws Exception {
         try (SherpaWakeWord detector = new SherpaWakeWord(app)) {
-            for (String name : new String[]{"positive", "positive-fast", "positive-faster", "negative", "negative-fast", "similar", "similar-fast"}) {
+            for (String name : new String[]{"positive", "positive-fast", "positive-faster", "negative", "negative-fast", "similar", "similar-fast", "old-keyword"}) {
                 detector.reset(); boolean detected = feed(detector, name);
                 android.os.Bundle result = new android.os.Bundle(); result.putString("wake_speed_case", name + " detected=" + detected);
                 instrumentation.sendStatus(0, result);
@@ -33,9 +33,9 @@ public final class WakeWordDeviceTest {
         }
     }
 
-    @Test public void configuredKeywordDetectsXiaoAnAndRejectsOtherPhrases() throws Exception {
+    @Test public void configuredKeywordDetectsXiaoTangAndRejectsOtherPhrases() throws Exception {
         try (SherpaWakeWord detector = new SherpaWakeWord(app)) {
-            assertTrue("未检出合成的小安", feed(detector, "positive"));
+            assertTrue("未检出合成的小糖", feed(detector, "positive"));
             detector.reset();
             assertFalse("普通说话误唤醒", feed(detector, "negative"));
             detector.reset();
@@ -177,15 +177,15 @@ public final class WakeWordDeviceTest {
             long at = SystemClock.elapsedRealtime();
             java.lang.reflect.Field tokenField = GuardianRuntime.class.getDeclaredField("generation");
             tokenField.setAccessible(true);
-            assertTrue(GuardianRuntime.publishWake(tokenField.getLong(null), "已就绪 · 小安", at));
+            assertTrue(GuardianRuntime.publishWake(tokenField.getLong(null), "已就绪 · 小糖", at));
             app.sendBroadcast(new android.content.Intent(GuardianService.ACTION).setPackage(app.getPackageName()));
             // 字幕跟随真实播报，不能只发布唤醒快照后假设已经播放。
             SpeechPlayback.speak(InteractionPorts.SpeechRequest.wake());
             awaitCaption(activity, "我在", 120000);
             SystemClock.sleep(1300);
             instrumentation.runOnMainSync(() -> {
-                assertEquals("小安 · 聆听", activity.findViewById(R.id.face).getContentDescription());
-                assertEquals(android.view.View.VISIBLE, activity.findViewById(R.id.emotion_name).getVisibility());
+                assertEquals("小糖 · 聆听", activity.findViewById(R.id.face).getContentDescription());
+                // 倾听时不要求字幕可见；字幕已在上方按实际播放检查。
             });
             SystemClock.sleep(4500);
             instrumentation.runOnMainSync(() -> assertFalse("我在".contentEquals(

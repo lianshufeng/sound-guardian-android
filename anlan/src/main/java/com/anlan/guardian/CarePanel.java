@@ -81,7 +81,7 @@ final class CarePanel {
             String[] names = {"饮水", "用餐", "工作休息", "阅读休息", "活动计划", "已设置的用药事项", "预约事项", "出门清单", "其他"};
             String[] ids = {"S49", "S50", "S51", "S52", "S53", "S54", "S55", "S56", "manual"};
             new android.app.AlertDialog.Builder(activity).setTitle("提醒类型").setItems(names, (dialog, which) -> {
-                android.widget.EditText input = new android.widget.EditText(activity); input.setHint("输入你希望小安提醒的内容");
+                android.widget.EditText input = new android.widget.EditText(activity); input.setHint("输入你希望小糖提醒的内容");
                 input.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(300)});
                 new android.app.AlertDialog.Builder(activity).setTitle(names[which]).setView(input).setNegativeButton("取消", null)
                         .setPositiveButton("选择时间", (choice, ok) -> {

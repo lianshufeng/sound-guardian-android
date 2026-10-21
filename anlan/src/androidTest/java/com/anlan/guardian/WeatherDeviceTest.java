@@ -204,7 +204,7 @@ public final class WeatherDeviceTest {
                 androidx.drawerlayout.widget.DrawerLayout drawer = (androidx.drawerlayout.widget.DrawerLayout)
                         ((android.view.ViewGroup) activity.findViewById(android.R.id.content)).getChildAt(0);
                 drawer.openDrawer(android.view.Gravity.RIGHT, false); assertTrue(drawer.isDrawerVisible(android.view.Gravity.RIGHT));
-                assertNotNull(findText(drawer, "小安 · 智能守护"));
+                assertNotNull(findText(drawer, "小糖 · 智能守护"));
                 findText(drawer, "设置").performClick();
                 findText(drawer, "地区设置").performClick();
                 assertNotNull(findText(drawer, "自动定位城市"));
@@ -213,7 +213,7 @@ public final class WeatherDeviceTest {
                 findText(drawer, "重庆市").performClick(); assertNotNull(findText(drawer, "选择地级市"));
                 findText(drawer, "重庆").performClick(); assertNotNull(findText(drawer, "自动定位城市"));
                 activity.onBackPressed(); assertNotNull(findText(drawer, "显示声音强度"));
-                activity.onBackPressed(); assertNotNull(findText(drawer, "小安 · 智能守护"));
+                activity.onBackPressed(); assertNotNull(findText(drawer, "小糖 · 智能守护"));
                 activity.closeDrawer();
             });
         } finally {

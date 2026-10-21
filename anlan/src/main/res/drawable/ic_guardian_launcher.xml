@@ -1,6 +1,2 @@
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:insetLeft="6dp" android:insetTop="6dp"
-    android:insetRight="6dp" android:insetBottom="6dp">
-    <bitmap android:src="@drawable/anlan_home_guardian"
-        android:gravity="fill" android:filter="true" />
-</inset>
+<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
+    android:src="@drawable/ic_hongtang_launcher" android:gravity="fill" />

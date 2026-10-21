@@ -131,8 +131,7 @@ public final class GuardianDeviceTest {
     }
 
     @Test public void renderAllExpressionsAndIcon() throws Exception {
-        MainActivity activity=launch();
-        try {
+        // 图标和表情绘制不依赖麦克风服务或 Activity 启动。
             final Bitmap[] output = new Bitmap[1];
             instrumentation.runOnMainSync(() -> {
                 int rows = (Emotion.values().length + 3) / 4;
@@ -142,19 +141,23 @@ public final class GuardianDeviceTest {
                 int i=0;
                 for(Emotion emotion:Emotion.values()) {
                     int x=i%4*320,y=i/4*210;
-                    FaceView face=new FaceView(activity); face.layout(0,0,320,180);
+                    FaceView face=new FaceView(app); face.layout(0,0,320,180);
                     face.setState(new BehaviorEngine.State(emotion,"",0,false,""),SystemClock.elapsedRealtime()-600);
                     canvas.save(); canvas.clipRect(x,y,x+320,y+180); canvas.translate(x,y); face.draw(canvas); canvas.restore();
                     canvas.drawText(emotion.title,x+160,y+198,text); i++;
                 }
-                android.graphics.drawable.Drawable icon=activity.getDrawable(R.mipmap.ic_launcher);
+                android.graphics.drawable.Drawable icon=app.getDrawable(R.mipmap.ic_launcher);
                 icon.setBounds(860,rows*210+20,980,rows*210+140); icon.draw(canvas);
-                canvas.drawText("安澜 · 安心相伴",1080,rows*210+90,text);
+                canvas.drawText("红糖 · 安心相伴",1080,rows*210+90,text);
                 output[0]=sheet;
             });
             try(FileOutputStream out=new FileOutputStream(new File(app.getExternalFilesDir(null),"expressions.png"))) { output[0].compress(Bitmap.CompressFormat.PNG,100,out); }
             output[0].recycle();
-        } finally { app.stopService(new Intent(app,GuardianService.class)); instrumentation.runOnMainSync(activity::finish); }
+            Bitmap iconPreview=Bitmap.createBitmap(512,512,Bitmap.Config.ARGB_8888);
+            android.graphics.drawable.Drawable rectangle=app.getDrawable(R.drawable.ic_guardian_launcher);
+            rectangle.setBounds(0,0,512,512); rectangle.draw(new Canvas(iconPreview));
+            try(FileOutputStream out=new FileOutputStream(new File(app.getExternalFilesDir(null),"icon-rectangle.png"))) { iconPreview.compress(Bitmap.CompressFormat.PNG,100,out); }
+            iconPreview.recycle();
     }
 
     @Test public void modelBubblesFloatFadeAndThrottleDuplicates() throws Exception {
@@ -289,7 +292,7 @@ public final class GuardianDeviceTest {
                 assertTrue(findText(drawer, "表情名称") instanceof android.widget.CheckBox);
                 assertTrue(drawer.isDrawerOpen(android.view.Gravity.RIGHT));
                 activity.onBackPressed();
-                assertNotNull(findText(drawer, "小安 · 智能守护"));
+                assertNotNull(findText(drawer, "小糖 · 智能守护"));
                 findText(drawer, "预览").performClick();
                 assertNotNull(findText(drawer, "模拟声音事件"));
                 findText(drawer, "事件记录").performClick();
@@ -395,7 +398,7 @@ public final class GuardianDeviceTest {
                 assertTrue(panel.getChildAt(0) instanceof VoiceWaveView);
                 assertNull(findText(panel, "结束"));
                 android.view.View header = activity.findViewById(R.id.header);
-                assertTrue(findText(header, "安澜").hasOnClickListeners());
+                assertTrue(findText(header, "红糖").hasOnClickListeners());
                 assertNull(findText(header, "说话"));
                 GuardianRuntime.publishInput("CUE");
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }

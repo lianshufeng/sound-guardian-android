@@ -97,7 +97,7 @@ public final class ResourceProfileDeviceTest {
                     report("tts_load", 0); begin();
                     com.k2fsa.sherpa.onnx.GeneratedAudio audio = model.synthesize("我在");
                     report("tts_wake_synthesize", audio.getSamples().length * 1000.0 / audio.getSampleRate()); begin();
-                    audio = model.synthesize("你好，我是小安。我会在这里，安静地陪伴你。");
+                    audio = model.synthesize("你好，我是小糖。我会在这里，安静地陪伴你。");
                     report("tts_sentence_synthesize", audio.getSamples().length * 1000.0 / audio.getSampleRate());
                 }
                 break;
