@@ -33,6 +33,10 @@ public final class MainActivity extends Activity {
     private FaceView face;
     private TextView emotionName, soundLevelName;
     private FrameLayout conversationBar;
+    private android.widget.ImageButton callButton;
+    private float callTouchX, callTouchY;
+    private boolean callTouchMoved, callTouchOnButton, callTouchInDrawer;
+    private final Runnable hideCallButton = () -> { if (callButton != null) callButton.setVisibility(View.INVISIBLE); };
     private TextView inputHint;
     private VoiceWaveView inputWave;
     private boolean inputPanelVisible;
@@ -108,6 +112,20 @@ public final class MainActivity extends Activity {
         header.addView(weatherWidget, weatherParams);
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(64)));
         FrameLayout center = new FrameLayout(this); face = new FaceView(this); face.setId(R.id.face); center.addView(face, new FrameLayout.LayoutParams(-1, -1));
+        android.widget.ImageButton call = new android.widget.ImageButton(this);
+        callButton = call; call.setVisibility(View.INVISIBLE);
+        call.setImageResource(R.drawable.ic_video_call); call.setContentDescription("音视频通话");
+        android.graphics.drawable.GradientDrawable callBackground = new android.graphics.drawable.GradientDrawable();
+        callBackground.setColor(0xFF203B3B); callBackground.setCornerRadius(dp(28)); call.setBackground(callBackground);
+        FrameLayout.LayoutParams callParams = new FrameLayout.LayoutParams(dp(56), dp(56), Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        callParams.leftMargin = dp(8); center.addView(call, callParams);
+        call.setOnClickListener(v -> {
+            if (GuardianService.callActive) return;
+            GuardianService.callActive = true;
+            try { startActivity(new Intent(this, CallActivity.class)); }
+            catch (RuntimeException error) { GuardianService.callActive = false;
+                android.widget.Toast.makeText(this, "无法打开通话页面", android.widget.Toast.LENGTH_SHORT).show(); }
+        });
         face.setTouchListener((action, x, y, now) -> {
             Care.userInteraction();
             behavior.gesture(action, x, y, now); render();
@@ -278,6 +296,7 @@ public final class MainActivity extends Activity {
     private TextView text(String value, float size, int color) { TextView t = new TextView(this); t.setText(value); t.setTextSize(size); t.setTextColor(color); return t; }
 
     private void startListening() {
+        if (GuardianService.callActive) return;
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             if (!startupAttempted) { startupAttempted = true; permissionPending = true; requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 9); }
             return;
@@ -382,6 +401,31 @@ public final class MainActivity extends Activity {
         }
         return super.dispatchKeyEvent(event);
     }
+    @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+        int action = event.getActionMasked();
+        if (action == android.view.MotionEvent.ACTION_DOWN) {
+            callTouchX = event.getRawX(); callTouchY = event.getRawY(); callTouchMoved = false;
+            callTouchInDrawer = menuDrawer != null && menuDrawer.isDrawerVisible(menuPanel);
+            android.graphics.Rect bounds = new android.graphics.Rect();
+            callTouchOnButton = callButton != null && callButton.isShown()
+                    && callButton.getGlobalVisibleRect(bounds) && bounds.contains((int) callTouchX, (int) callTouchY);
+            handler.removeCallbacks(hideCallButton);
+        } else if (action == android.view.MotionEvent.ACTION_MOVE) {
+            int slop = android.view.ViewConfiguration.get(this).getScaledTouchSlop();
+            if (Math.abs(event.getRawX() - callTouchX) > slop || Math.abs(event.getRawY() - callTouchY) > slop) callTouchMoved = true;
+        } else if (action == android.view.MotionEvent.ACTION_POINTER_DOWN) callTouchMoved = true;
+        boolean handled = super.dispatchTouchEvent(event);
+        if (callButton != null && (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL)) {
+            boolean drawerVisible = menuDrawer != null && menuDrawer.isDrawerVisible(menuPanel);
+            if (callTouchInDrawer || drawerVisible || !visible || GuardianService.callActive) hideCallButton.run();
+            else {
+                if (action == android.view.MotionEvent.ACTION_UP && !callTouchMoved && !callTouchOnButton)
+                    callButton.setVisibility(callButton.getVisibility() == View.VISIBLE ? View.INVISIBLE : View.VISIBLE);
+                if (callButton.getVisibility() == View.VISIBLE) handler.postDelayed(hideCallButton, 3000);
+            }
+        }
+        return handled;
+    }
     void closeDrawer() { if (menuDrawer != null) menuDrawer.closeDrawer(menuPanel); }
     void applyBrightness(float brightness) { android.view.WindowManager.LayoutParams params = getWindow().getAttributes(); params.screenBrightness = brightness; getWindow().setAttributes(params); getPreferences(MODE_PRIVATE).edit().putFloat("brightness", brightness).apply(); }
     private int dp(float n) { return Math.round(n * getResources().getDisplayMetrics().density); }
@@ -391,6 +435,13 @@ public final class MainActivity extends Activity {
         androidx.core.content.ContextCompat.registerReceiver(this, receiver, new IntentFilter(GuardianService.ACTION), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
         registered = true; receive(null); handler.post(ticker);
         weatherWidget.start();
+        if (GuardianService.callActive) handler.post(new Runnable() {
+            @Override public void run() {
+                if (!visible) return;
+                if (GuardianService.callActive) { handler.postDelayed(this, 200); return; }
+                startListening();
+            }
+        });
         if (!listening && (!startupAttempted || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED)) startListening();
         else requestWeatherPermission();
         if (listening) startupAttempted = true;
@@ -401,6 +452,7 @@ public final class MainActivity extends Activity {
         super.onSaveInstanceState(out);
     }
     @Override protected void onStop() {
+        handler.removeCallbacks(hideCallButton); hideCallButton.run();
         behavior.gesture(TouchInteraction.CANCEL, 0, 0, SystemClock.elapsedRealtime());
         visible = false; handler.removeCallbacks(ticker);
         inputWave.phase("IDLE"); updateConversationBack();

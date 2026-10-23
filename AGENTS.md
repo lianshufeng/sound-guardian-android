@@ -14,6 +14,8 @@
 
 ## 应用与共享边界
 
+- 红糖音视频通话只在 `anlan/` 使用 Jitsi Android SDK，设置位于 `communication` 本地偏好。入会前等待唯一守护麦克风实际释放，通话期间暂停守护及本地语音交互；退出释放 SDK 会议资源并等待录音结束后，返回主页恢复守护。不得同时开启两套麦克风采集；接入和验收边界见 `anlan/docs/video-calling.md`。
+
 - `app/` 和 `anlan/` 是并列的 Android 应用模块，统一使用仓库根目录的 Gradle 配置和 Wrapper；`core/` 是两者依赖的共享库。
 - 模型、标签、中文映射、模型元数据、事件规则、音频参数、推理器和事件引擎只能在 `core/` 维护，禁止在应用中复制或覆盖。
 - 包名、界面、前台服务外壳、历史数据和产品交互各自独立；红糖专属表情行为配置位于 `anlan/src/main/assets/behavior.json`。

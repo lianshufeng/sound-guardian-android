@@ -29,6 +29,28 @@ public final class GuardianService extends Service {
     public static final String ACTION = "anlan.guardian.update";
     // 新旧 Service 实例共用串行队列，确保快速重启时旧录音完全释放后才创建新录音。
     private static final ExecutorService AUDIO = Executors.newSingleThreadExecutor();
+    static volatile boolean callActive;
+    private static volatile boolean audioReleased = true;
+    static boolean audioReleased() { return audioReleased; }
+    static void prepareCall(android.content.Context context) {
+        callActive = true; audioReleased = false;
+        context.stopService(new Intent(context, GuardianService.class));
+        // 与采集任务共用串行队列；旧实例及排队采集全部退出后才交接。
+        AUDIO.execute(() -> audioReleased = true);
+    }
+    static void releaseCall(android.content.Context context) {
+        android.content.Context app = context.getApplicationContext();
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override public void run() {
+                android.media.AudioManager audio = (android.media.AudioManager) app.getSystemService(AUDIO_SERVICE);
+                // 其他应用的录音配置已匿名化（sessionId=0），只等待本应用的SDK录音。
+                if (audio.getActiveRecordingConfigurations().stream().anyMatch(config -> config.getClientAudioSessionId() != 0)) {
+                    new Handler(Looper.getMainLooper()).postDelayed(this, 200); return;
+                }
+                callActive = false;
+            }
+        });
+    }
     private final Object audioLock = new Object();
     private AudioRecord record;
     private volatile boolean running;
@@ -53,6 +75,7 @@ public final class GuardianService extends Service {
     private volatile java.util.Set<String> safetyEventIds = Collections.emptySet();
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        if (callActive) { stopSelf(startId); return START_NOT_STICKY; }
         latestStartId = startId;
         if (speechOutput != null) speechOutput.performanceModeChanged();
         if (understandingWorker != null) understandingWorker.performanceModeChanged();

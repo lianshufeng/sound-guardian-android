@@ -1,0 +1,36 @@
+// 固定版本的原生语言检测仍使用旧语言码，且 languageOnly 会把 zh-CN 截成 zh。
+// 仅生成应用覆盖资产，不修改或提交第三方依赖的完整脚本。
+configurations.create('jitsiChineseBundle') { transitive = false }
+dependencies.add('jitsiChineseBundle', configurations.implementation.dependencies.find {
+    it.group == 'org.jitsi.react' && it.name == 'jitsi-meet-sdk'
+}.copy())
+
+def chineseAssets = layout.buildDirectory.dir('generated/jitsiChinese/assets')
+def chineseBundle = tasks.register('prepareJitsiChineseBundle') {
+    inputs.files(configurations.jitsiChineseBundle)
+    inputs.file('src/main/assets/communication/zh-CN.json')
+    inputs.file('jitsi-chinese.gradle')
+    outputs.dir(chineseAssets)
+    doLast {
+        def source = zipTree(configurations.jitsiChineseBundle.singleFile).matching {
+            include 'assets/index.android.bundle'
+        }.singleFile.getText('UTF-8')
+        def original = "defaultNS:'main',fallbackLng:G,interpolation:{escapeValue:!1},load:'languageOnly'"
+        if (source.count(original) != 1) {
+            throw new GradleException('会议组件语言初始化结构已变化，请重新核对中文适配')
+        }
+        def target = new File(chineseAssets.get().asFile, 'index.android.bundle')
+        target.parentFile.mkdirs()
+        source = source.replace(original,
+                "defaultNS:'main',lng:'zh-CN',fallbackLng:'zh-CN',interpolation:{escapeValue:!1},load:'currentOnly'")
+        def translations = new groovy.json.JsonSlurper().parse(file('src/main/assets/communication/zh-CN.json'), 'UTF-8')
+        def marker = '}),1819,[]);'
+        if (source.count(marker) != 1) throw new GradleException('会议中文资源模块已变化，请重新核对中文适配')
+        def patch = ';Object.entries(' + groovy.json.JsonOutput.toJson(translations) +
+                ').forEach(function(entry){var path=entry[0].split("."),node=a.exports;' +
+                'path.slice(0,-1).forEach(function(key){node=node[key]||(node[key]={})});node[path[path.length-1]]=entry[1]});'
+        target.setText(source.replace(marker, patch + marker), 'UTF-8')
+    }
+}
+android.sourceSets.main.assets.srcDir(files(chineseAssets).builtBy(chineseBundle))
+tasks.named('preBuild').configure { dependsOn(chineseBundle) }

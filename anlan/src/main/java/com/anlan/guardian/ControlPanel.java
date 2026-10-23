@@ -77,7 +77,35 @@ final class ControlPanel {
         weather.setOnClickListener(v -> ((WeatherWidget) activity.findViewById(R.id.weather_clock)).showRegionSettings(this::settings));
         body.addView(weather, new LinearLayout.LayoutParams(-1, dp(62)));
         ScrollView scroll = new ScrollView(activity); scroll.addView(body);
+        sectionDivider(body);
+        TextView communication = text("音视频通话", 17, 0xFFD2E5DC);
+        communication.setGravity(Gravity.CENTER_VERTICAL);
+        communication.setPadding(dp(8), 0, 0, 0);
+        communication.setOnClickListener(v -> communication());
+        body.addView(communication, new LinearLayout.LayoutParams(-1, dp(62)));
         activity.showDrawerPage("设置", true, this::show, scroll);
+    }
+    private void communication() {
+        LinearLayout body = new LinearLayout(activity); body.setOrientation(LinearLayout.VERTICAL);
+        body.setPadding(dp(20), dp(16), dp(20), dp(16));
+        body.addView(text("服务器地址", 15, 0xFFD2E5DC));
+        android.widget.EditText server = new android.widget.EditText(activity);
+        server.setTextColor(0xFFE0FFF0); server.setSingleLine(true);
+        server.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_URI);
+        server.setText(CallSettings.server(activity)); body.addView(server);
+        body.addView(text("房间名称", 15, 0xFFD2E5DC));
+        android.widget.EditText room = new android.widget.EditText(activity);
+        room.setTextColor(0xFFE0FFF0); room.setSingleLine(true); room.setText(CallSettings.room(activity)); body.addView(room);
+        room.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
+        TextView status = text("同一服务器、同一房间的成员可以互相通话。通话期间暂停声音守护。", 13, 0xFF8BA69C); body.addView(status);
+        Button save = new Button(activity); save.setText("保存"); body.addView(save);
+        save.setOnClickListener(v -> { try { CallSettings.save(activity, server.getText().toString(), room.getText().toString()); status.setText("已保存");
+                ((android.view.inputmethod.InputMethodManager) activity.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(room.getWindowToken(), 0); }
+            catch (IllegalArgumentException error) { status.setText(error.getMessage()); } });
+        room.setOnEditorActionListener((view, action, event) -> { if (action == android.view.inputmethod.EditorInfo.IME_ACTION_DONE
+                || (event != null && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER && event.getAction() == android.view.KeyEvent.ACTION_UP)) { save.performClick(); return true; } return false; });
+        ScrollView scroll = new ScrollView(activity); scroll.addView(body);
+        activity.showDrawerPage("音视频通话", true, this::settings, scroll);
     }
     private void sectionDivider(LinearLayout body) {
         View divider = new View(activity); divider.setBackgroundColor(0xFF2E4148);

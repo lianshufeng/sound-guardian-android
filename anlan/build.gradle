@@ -22,6 +22,7 @@ android {
 }
 
 dependencies {
+    implementation 'org.jitsi.react:jitsi-meet-sdk:11.6.3'
     implementation files(rootProject.file('libs/sherpa-onnx-1.13.8.aar'))
     implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.24'
     implementation project(':core')
@@ -31,3 +32,5 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:1.5.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
 }
+
+apply from: 'jitsi-chinese.gradle'
