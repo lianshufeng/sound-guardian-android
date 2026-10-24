@@ -106,7 +106,10 @@ public final class GuardianService extends Service {
             inputSessions = new InputSessionController(new InputSessionController.Host() {
                 public UnderstandingWorker worker() { return understandingWorker; }
                 public boolean available() { return isCurrent(sessionToken) && !speechBusy; }
-                public void readyForInput() { if (understandingWorker != null) understandingWorker.setSuppressed(false); }
+                public void readyForInput() {
+                    if (wakeWorker != null) wakeWorker.setSuppressed(false);
+                    if (understandingWorker != null) understandingWorker.setSuppressed(false);
+                }
                 public boolean cueEnabled() { return getSharedPreferences("ai_model",MODE_PRIVATE).getBoolean("cue",true); }
                 public void cue(Runnable complete, java.util.function.Consumer<String> failed) {
                     SpeechPlayback.speak(new InteractionPorts.SpeechRequest(InteractionPorts.SpeechRequest.Source.CUE,"提示音","","",new InteractionPorts.SpeechOutput.Progress() {
@@ -356,8 +359,11 @@ public final class GuardianService extends Service {
                 if (BuildConfig.DEBUG) android.util.Log.i("AnlanWake", "response_blocked=high_priority_event at=" + at);
                 return;
             }
+            if (Conversation.active()) {
+                if (conversation == null || !conversation.canInterruptWithWake()) return;
+                if (!conversation.interruptForWake()) return;
+            }
             if (care != null) care.interrupt("USER_WAKE");
-            if (conversation != null) conversation.stop("NEW_WAKE");
             publishWake("已就绪 · 小糖", at);
             if (BuildConfig.DEBUG) android.util.Log.i("AnlanWake", "response_accepted at=" + at);
             SpeechPlayback.speak(InteractionPorts.SpeechRequest.wake());
@@ -397,15 +403,18 @@ public final class GuardianService extends Service {
     }
 
     private SpeechSession beginSpeech(InteractionPorts.SpeechRequest request, InteractionPorts.SpeechStreamListener listener) {
-        return beginSpeech(request, listener, false);
+        return beginSpeech(request, request == null ? null : request.source, listener);
     }
-    private SpeechSession beginSpeech(InteractionPorts.SpeechRequest request, InteractionPorts.SpeechStreamListener listener, boolean deferInput) {
+    private SpeechSession beginSpeech(InteractionPorts.SpeechRequest request, InteractionPorts.SpeechRequest.Source source,
+                                      InteractionPorts.SpeechStreamListener listener) {
         if (currentSpeech != null) currentSpeech.onCancelled();
         SpeechSession progress = new SpeechSession(request, listener);
         currentSpeech = progress;
         speechOutput.stop(); speechBusy = true;
-        if (wakeWorker != null) wakeWorker.setSuppressed(true);
-        if (!deferInput && understandingWorker != null) understandingWorker.setSuppressed(true);
+        boolean dialogueBargeIn = source == InteractionPorts.SpeechRequest.Source.DIALOGUE
+                && conversation != null && conversation.canInterruptWithWake();
+        if (wakeWorker != null) wakeWorker.setSuppressed(!dialogueBargeIn);
+        if (understandingWorker != null) understandingWorker.setSuppressed(true);
         publishSpeech(progress.displayId, GuardianRuntime.SpeechPhase.PREPARING, request, "");
         return progress;
     }
@@ -417,8 +426,7 @@ public final class GuardianService extends Service {
             if (GuardianRuntime.snapshot().events.stream().anyMatch(event -> event.active && event.priority() >= 3))
                 throw new IllegalStateException("高优先级守护事件正在处理，暂不接受播报");
             if (care != null) care.interrupt("OTHER_SPEECH");
-            boolean deferInput = source == InteractionPorts.SpeechRequest.Source.DIALOGUE && conversation != null && conversation.acceptingSupplement();
-            SpeechSession progress = beginSpeech(null, listener, deferInput);
+            SpeechSession progress = beginSpeech(null, source, listener);
             try { return speechOutput.openStream(source, eventId, progress); }
             catch (Exception error) { progress.onError(error.toString()); throw error; }
         });
@@ -472,7 +480,8 @@ public final class GuardianService extends Service {
                 publishSpeech(displayId, phase, request, error);
                 if (BuildConfig.DEBUG && request != null && request.source == InteractionPorts.SpeechRequest.Source.WAKE)
                     android.util.Log.i("AnlanWake", "speech_finish id=" + displayId + " phase=" + phase);
-                if (request != null && request.source == InteractionPorts.SpeechRequest.Source.WAKE && phase == GuardianRuntime.SpeechPhase.COMPLETE) {
+                if (request != null && request.source == InteractionPorts.SpeechRequest.Source.WAKE
+                        && (phase == GuardianRuntime.SpeechPhase.COMPLETE || Conversation.active())) {
                     main.post(() -> {
                         if (isCurrent(sessionToken) && id == speechRequestId && !speechBusy && conversation != null)
                             conversation.startAfterWake();

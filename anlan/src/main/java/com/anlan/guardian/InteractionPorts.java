@@ -56,7 +56,7 @@ public final class InteractionPorts {
             default void onUnderstanding(com.soundguardian.core.VoiceUnderstandingResult result) { onText(result.text); }
             /** 仅在 VAD 当前话轮已结束且其片段全部完成识别后调用。 */
             default void onUtteranceEnd() { }
-            /** VAD片段已结束且识别排空，但没有可用讲话文字；用于撤销疑似续说。 */
+            /** VAD片段已结束且识别排空，但没有可用讲话文字时调用。 */
             default void onAnalysisIdle() { }
             default void onVoice(boolean speaking) { }
         }

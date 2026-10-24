@@ -411,18 +411,12 @@ public final class GuardianDeviceTest {
                         SystemClock.elapsedRealtime(), null, 0, .85f));
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
                 assertEquals("正在听你说话", hint.getText().toString());
-                GuardianRuntime.publishConversation("ui-continuation", "CONTINUING_VOICE");
-                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
-                assertEquals("正在听你说话", hint.getText().toString());
-                GuardianRuntime.publishConversation("ui-continuation", "CONTINUING");
-                try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
-                assertEquals("请继续说", hint.getText().toString());
                 GuardianRuntime.publishInput("MONITORING"); GuardianRuntime.publishConversation("ui-continuation", "THINKING");
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
                 assertEquals("想一想", hint.getText().toString());
                 GuardianRuntime.publishConversation("ui-continuation", "WAITING_REPLY");
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
-                assertEquals("还在想，你也可以继续说", hint.getText().toString());
+                assertEquals("还在想，请稍候", hint.getText().toString());
                 GuardianRuntime.publishConversation("ui-continuation", "PREPARING_SPEECH");
                 try { receive.invoke(activity, new Object[]{null}); } catch (Exception error) { throw new IllegalStateException(error); }
                 assertEquals("正在准备声音", hint.getText().toString());

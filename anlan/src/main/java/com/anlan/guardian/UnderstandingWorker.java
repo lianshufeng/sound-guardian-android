@@ -140,13 +140,6 @@ final class UnderstandingWorker implements InteractionPorts.SpeechInput, AutoClo
     boolean isInputIdle() {
         synchronized (control) { return !closed && !memoryPaused && !voice && pendingSegments == 0; }
     }
-    void retainInput(long timeoutMs) {
-        synchronized (control) {
-            if (!closed && !suppressed && !memoryPaused && textListener != null)
-                until = SystemClock.elapsedRealtime() + Math.min(120000, Math.max(1, timeoutMs));
-        }
-    }
-
     void acceptPcm(short[] pcm, int count, int sampleRate) {
         if (!enabled(SystemClock.elapsedRealtime())) return;
         if (sampleRate != 16000) throw new IllegalArgumentException("语音理解输入必须为 16 kHz");

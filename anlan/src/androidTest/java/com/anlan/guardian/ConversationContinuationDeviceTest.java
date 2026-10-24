@@ -9,17 +9,18 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import org.junit.Ignore;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-/** 真实协调器及主线程状态机；输入、网络和播报边界可控，不使用用户凭据。 */
+/** 真实协调器及主线程状态机；输入、网络和播报边界可控，不使用用户凭据。旧续说用例保留为忽略项。 */
 public final class ConversationContinuationDeviceTest {
     private final Context app = InstrumentationRegistry.getInstrumentation().getTargetContext();
     private void main(Runnable action) { InstrumentationRegistry.getInstrumentation().runOnMainSync(action); }
     private void await(BooleanSupplier condition, long ms) {
         long until = SystemClock.elapsedRealtime() + ms;
         while (!condition.getAsBoolean() && SystemClock.elapsedRealtime() < until) SystemClock.sleep(20);
-        assertTrue("等待续说验收条件超时", condition.getAsBoolean());
+        assertTrue("等待对话验收条件超时", condition.getAsBoolean());
     }
     private VoiceUnderstandingResult result(String text, String event) {
         return new VoiceUnderstandingResult(System.nanoTime(), SystemClock.elapsedRealtime(), text, "NEUTRAL", "zh", event, 1000, 10);
@@ -106,7 +107,7 @@ public final class ConversationContinuationDeviceTest {
         }
     }
 
-    @Test public void firstWaitStartsAtReadyAndLaterTurnsStillUseThreeSeconds() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void firstWaitStartsAtReadyAndLaterTurnsStillUseThreeSeconds() throws Exception {
         try (Harness h = new Harness(false)) {
             SystemClock.sleep(3300); assertTrue(Conversation.active());
             main(() -> h.input.onReady());
@@ -118,6 +119,67 @@ public final class ConversationContinuationDeviceTest {
             assertEquals(6000, new DialogueConfig(app).wakeListenMs);
         }
     }
+    @Test public void wakeInterruptsModelAndSpeechButNeverTheNextInputTurn() throws Exception {
+        try (Harness h = new Harness(true)) {
+            InteractionPorts.SpeechInput.Result firstInput = h.input;
+            main(() -> {
+                assertFalse(h.coordinator.canInterruptWithWake());
+                assertFalse(h.coordinator.interruptForWake());
+                assertSame(firstInput, h.input);
+            });
+
+            h.submit("第一轮问题");
+            PendingStream firstReply = h.generate(0, "第一轮回答。");
+            main(() -> { assertTrue(firstReply.play()); firstReply.complete(); });
+            await(() -> h.input != null && h.input != firstInput, 2000);
+            main(() -> assertFalse(h.coordinator.canInterruptWithWake()));
+
+            InteractionPorts.SpeechInput.Result secondInput = h.input;
+            h.submit("被打断的问题");
+            InteractionPorts.DialogueAgent.Reply interruptedReply = h.agent.replies.get(1);
+            main(() -> {
+                assertTrue(h.coordinator.canInterruptWithWake());
+                assertTrue(h.coordinator.interruptForWake());
+                assertTrue(Conversation.active());
+                assertFalse(h.coordinator.canInterruptWithWake());
+                assertNull(h.input);
+            });
+            assertNotSame(secondInput, h.input);
+            try { interruptedReply.onDelta("这段回答必须作废"); fail("被唤醒打断的模型响应不应继续"); }
+            catch (IllegalStateException expected) { assertEquals("CANCELLED", expected.getMessage()); }
+
+            main(h.coordinator::startAfterWake);
+            await(() -> h.input != null && h.input != secondInput, 2000);
+            InteractionPorts.SpeechInput.Result resumedInput = h.input;
+            main(() -> {
+                assertFalse(h.coordinator.canInterruptWithWake());
+                assertFalse(h.coordinator.interruptForWake());
+                assertSame(resumedInput, h.input);
+            });
+
+            h.submit("继续问第三轮");
+            List<InteractionPorts.DialogueMessage> messages = h.agent.requests.get(2);
+            assertEquals("第一轮问题", messages.get(1).text);
+            assertEquals("第一轮回答。", messages.get(2).text);
+            assertEquals("继续问第三轮", messages.get(3).text);
+            assertFalse(messages.stream().anyMatch(message -> message.text.contains("被打断的问题")));
+
+            PendingStream thirdReply = h.generate(2, "第三轮回答。");
+            main(() -> {
+                assertTrue(thirdReply.play());
+                assertTrue(h.coordinator.canInterruptWithWake());
+                assertTrue(h.coordinator.interruptForWake());
+                assertTrue(thirdReply.cancelled);
+                assertTrue(Conversation.active());
+            });
+            main(h.coordinator::startAfterWake);
+            await(() -> h.input != null, 2000);
+            main(() -> {
+                assertFalse(h.coordinator.canInterruptWithWake());
+                assertFalse(h.coordinator.interruptForWake());
+            });
+        }
+    }
     @Test public void silentFirstWindowExpiresAfterSixSeconds() throws Exception {
         try (Harness h = new Harness(true)) {
             long start = SystemClock.elapsedRealtime();
@@ -127,7 +189,7 @@ public final class ConversationContinuationDeviceTest {
             main(() -> assertEquals("TIMEOUT", GuardianRuntime.conversationState()));
         }
     }
-    @Test public void supplementBeforeFirstDeltaIsBatchedAndExitRemainsLocal() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void supplementBeforeFirstDeltaIsBatchedAndExitRemainsLocal() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("我想做晚饭。");
             h.submit("给我一点建议。");
@@ -144,7 +206,7 @@ public final class ConversationContinuationDeviceTest {
             assertFalse(Conversation.active()); assertEquals(2, h.agent.requests.size());
         }
     }
-    @Test public void validSupplementsCancelOldReplyMergeRepeatedlyAndDoNotPolluteHistory() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void validSupplementsCancelOldReplyMergeRepeatedlyAndDoNotPolluteHistory() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("帮我想想晚饭吃什么。");
             PendingStream old = h.generate(0, "旧回答不能播放。");
@@ -173,7 +235,7 @@ public final class ConversationContinuationDeviceTest {
             main(() -> { owner.onError("OLD_INPUT"); h.coordinator.stop("TEST_END"); });
         }
     }
-    @Test public void noiseOnlyTemporarilyHoldsPlaybackWithoutCancellingRequest() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void noiseOnlyTemporarilyHoldsPlaybackWithoutCancellingRequest() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("给我一点晚饭建议。");
             main(() -> h.input.onVoice(true));
@@ -190,7 +252,7 @@ public final class ConversationContinuationDeviceTest {
             });
         }
     }
-    @Test public void rapidCorrectionFragmentsReplaceOnlyOnceAfterStableEnd() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void rapidCorrectionFragmentsReplaceOnlyOnceAfterStableEnd() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("请介绍北京的景点。"); PendingStream draft = h.generate(0, "北京可以去故宫。");
             h.submit("不是北京，"); SystemClock.sleep(400);
@@ -219,7 +281,7 @@ public final class ConversationContinuationDeviceTest {
             main(() -> { assertTrue(draft.play()); draft.complete(); });
         }
     }
-    @Test public void completedDraftAndOldNetworkFailureCannotOverrideBufferedSupplement() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void completedDraftAndOldNetworkFailureCannotOverrideBufferedSupplement() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("请介绍北京的景点。"); PendingStream draft = h.generate(0, "北京可以去故宫。");
             main(() -> h.input.onUnderstanding(result("改成南京。", "Speech")));
@@ -231,7 +293,7 @@ public final class ConversationContinuationDeviceTest {
             assertTrue(draft.cancelled); assertEquals("THINKING", GuardianRuntime.conversationState());
         }
     }
-    @Test public void pendingDecodeAndLateVoiceBlockEvenPreparedDraft() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void pendingDecodeAndLateVoiceBlockEvenPreparedDraft() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("请给我一点建议。"); PendingStream draft = h.generate(0, "先休息一下。");
             main(() -> { h.busy = true; assertFalse(draft.play()); h.input.onVoice(true); });
@@ -240,7 +302,7 @@ public final class ConversationContinuationDeviceTest {
             main(() -> { h.input.onVoice(false); h.input.onAnalysisIdle(); h.busy = false; assertTrue(draft.play()); draft.complete(); });
         }
     }
-    @Test public void localExitCancelsDraftImmediatelyWithoutWaitingForStableEnd() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void localExitCancelsDraftImmediatelyWithoutWaitingForStableEnd() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("请介绍北京的景点。"); PendingStream draft = h.generate(0, "北京可以去故宫。");
             main(() -> h.input.onUnderstanding(result("再说一下南京。", "Speech")));
@@ -248,7 +310,7 @@ public final class ConversationContinuationDeviceTest {
             assertTrue(draft.cancelled); assertFalse(Conversation.active()); assertEquals(1, h.agent.requests.size());
         }
     }
-    @Test public void slowSseAdapterCoalescesBufferedTextWithoutSendingEveryFragment() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void slowSseAdapterCoalescesBufferedTextWithoutSendingEveryFragment() throws Exception {
         List<String> payloads = new CopyOnWriteArrayList<>();
         try (Harness h = new Harness(true, null, profile -> new OpenAiCompatibleAgent(profile, new DialogueConfig(app), url ->
                 new java.net.HttpURLConnection(new java.net.URL(url)) {
@@ -279,7 +341,7 @@ public final class ConversationContinuationDeviceTest {
             assertEquals(2, payloads.size());
         }
     }
-    @Test public void generatedPcmSamplesRetainIncrementalInputAndDiscardUnplayedDraft() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void generatedPcmSamplesRetainIncrementalInputAndDiscardUnplayedDraft() throws Exception {
         org.junit.Assume.assumeTrue(Boolean.parseBoolean(InstrumentationRegistry.getArguments().getString("draft_pcm", "false")));
         app.stopService(new android.content.Intent(app, GuardianService.class)); SystemClock.sleep(1000);
         java.util.concurrent.CountDownLatch ready = new java.util.concurrent.CountDownLatch(1);
@@ -313,7 +375,7 @@ public final class ConversationContinuationDeviceTest {
             }
         }
     }
-    @Test public void nativeTtsOnlyPlaysLatestConfirmedDraft() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void nativeTtsOnlyPlaysLatestConfirmedDraft() throws Exception {
         org.junit.Assume.assumeTrue(Boolean.parseBoolean(InstrumentationRegistry.getArguments().getString("draft_tts", "false")));
         app.stopService(new android.content.Intent(app, GuardianService.class)); SystemClock.sleep(1000);
         AtomicReference<String> status = new AtomicReference<>("");
@@ -333,7 +395,7 @@ public final class ConversationContinuationDeviceTest {
             assertTrue("实际TTS完成后应进入下一轮倾听：" + status.get(), Conversation.active());
         }
     }
-    @Test public void nativePcmAndTtsCoexistWithoutPlayingSupersededDraft() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void nativePcmAndTtsCoexistWithoutPlayingSupersededDraft() throws Exception {
         org.junit.Assume.assumeTrue(Boolean.parseBoolean(InstrumentationRegistry.getArguments().getString("draft_pcm", "false"))
                 && Boolean.parseBoolean(InstrumentationRegistry.getArguments().getString("draft_tts", "false")));
         app.stopService(new android.content.Intent(app, GuardianService.class)); SystemClock.sleep(1000);
@@ -367,7 +429,7 @@ public final class ConversationContinuationDeviceTest {
             }
         }
     }
-    @Test public void cancelAndHighPriorityEventInvalidatePendingPlaybackAndInput() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void cancelAndHighPriorityEventInvalidatePendingPlaybackAndInput() throws Exception {
         try (Harness h = new Harness(true)) {
             h.submit("给我一点鼓励。"); PendingStream output = h.generate(0, "你已经做得很好。");
             InteractionPorts.SpeechInput.Result old = h.input;
@@ -375,7 +437,7 @@ public final class ConversationContinuationDeviceTest {
             assertFalse(Conversation.active()); assertEquals(1, h.agent.requests.size());
         }
     }
-    @Test public void realPcmSpeechAfterSubmissionIsMergedThroughTheSameInputWorker() throws Exception {
+    @Ignore("旧续说行为已移除") @Test public void realPcmSpeechAfterSubmissionIsMergedThroughTheSameInputWorker() throws Exception {
         app.stopService(new android.content.Intent(app, GuardianService.class)); SystemClock.sleep(1500);
         byte[] bytes;
         try (java.io.InputStream fixture = InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("understanding-test/zh.pcm")) { bytes = fixture.readAllBytes(); }
