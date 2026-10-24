@@ -46,11 +46,6 @@ final class CarePanel {
         action(body, "停止当前关怀", () -> { try { Care.cancel(Care.activeId()); } catch (IllegalStateException ignored) { } });
         if (Care.phase().equals("LISTENING")) for (String value : new String[]{"我没事", "需要帮助", "不用", "稍后", "是电视"})
             action(body, value, () -> { try { Care.respond(Care.activeId(), value); show(); } catch (IllegalStateException ignored) { } });
-        if (BuildConfig.DEBUG) {
-            sectionDivider(body);
-            action(body, "试用：保暖提醒", () -> demo(false));
-            action(body, "试用：关怀询问", () -> demo(true));
-        }
         page("主动关怀", body, back);
     }
     private void sectionDivider(LinearLayout body) {
@@ -64,15 +59,6 @@ final class CarePanel {
         editor.apply();
         try { activity.startForegroundService(new Intent(activity, GuardianService.class)); } catch (RuntimeException ignored) { }
         show();
-    }
-    private void demo(boolean ask) {
-        try {
-            long now = System.currentTimeMillis();
-            Care.submit(new InteractionPorts.CareRequest(java.util.UUID.randomUUID().toString(), "manual", "",
-                    ask ? "你还好吗？需要我陪你一会儿吗？" : "外面有些冷，出门记得添衣。",
-                    ask ? InteractionPorts.CareRequest.Mode.ASK : InteractionPorts.CareRequest.Mode.NOTICE,
-                    ask ? settings.replyTimeoutMs : 0, now + 60000), result -> { });
-        } catch (IllegalStateException error) { android.widget.Toast.makeText(activity, "请先开启声音守护", android.widget.Toast.LENGTH_SHORT).show(); }
     }
     private void schedules() {
         LinearLayout body = column();

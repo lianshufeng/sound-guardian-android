@@ -192,8 +192,8 @@ public final class GuardianService extends Service {
         NotificationChannel channel = new NotificationChannel("anlan_listen", getString(com.anlan.guardian.R.string.channel_name), NotificationManager.IMPORTANCE_LOW);
         getSystemService(NotificationManager.class).createNotificationChannel(channel);
         PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class), PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-        return new NotificationCompat.Builder(this, "anlan_listen").setContentTitle("红糖正在守护")
-                .setContentText("本地声音识别 · 不保存录音").setSmallIcon(R.drawable.ic_guardian)
+        return new NotificationCompat.Builder(this, "anlan_listen").setContentTitle("红糖智能守护中")
+                .setContentText("守护与陪伴服务正在运行").setSmallIcon(R.drawable.ic_guardian)
                 .setContentIntent(open).setOngoing(true).build();
     }
 

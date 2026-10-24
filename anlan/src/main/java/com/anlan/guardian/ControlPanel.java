@@ -18,9 +18,8 @@ import java.util.function.Consumer;
 final class ControlPanel {
     private final MainActivity activity;
     private final Consumer<Emotion> preview;
-    private final Consumer<SoundEvent> simulate;
-    ControlPanel(MainActivity activity, Consumer<Emotion> preview, Consumer<SoundEvent> simulate) {
-        this.activity = activity; this.preview = preview; this.simulate = simulate;
+    ControlPanel(MainActivity activity, Consumer<Emotion> preview) {
+        this.activity = activity; this.preview = preview;
     }
     void show() {
         String[] items = {"设置", "预览", "设备状态", "AI模型", "关于"};
@@ -114,13 +113,12 @@ final class ControlPanel {
     }
     private void previews() {
         String[] items = BuildConfig.DEBUG
-                ? new String[]{"事件记录", "场景", "表情预览", "模拟声音事件"}
+                ? new String[]{"事件记录", "场景", "表情预览"}
                 : new String[]{"事件记录", "场景"};
         drawer("预览", items, true, which -> {
             if (which == 0) history();
             else if (which == 1) scenarios();
             else if (which == 2) expressions();
-            else if (which == 3) simulations();
         });
     }
 
@@ -243,20 +241,6 @@ final class ControlPanel {
             button.setOnClickListener(v -> preview.accept(emotion));
         }
         activity.showDrawerPage("表情预览 · " + Emotion.values().length + " 种", true, this::previews, scroll);
-    }
-    private void simulations() {
-        String[] names={"咳嗽", "哭泣", "呻吟", "撞击声", "玻璃破碎", "警报", "轻敲", "开心响指（连续或两次）"};
-        String[] labels={"Cough", "Crying, sobbing", "Groan", "Smash, crash", "Shatter", "Alarm", "Tap", "Finger snapping"};
-        LinearLayout body = new LinearLayout(activity); body.setOrientation(LinearLayout.VERTICAL); body.setPadding(dp(12), dp(8), dp(12), dp(12));
-        TextView note = text("不写入事件记录；响指项同时体验表情与语音，其余项仅模拟表情", 13, 0xFF8BA69C); note.setPadding(dp(8), dp(8), dp(8), dp(16)); body.addView(note);
-        for (int i = 0; i < names.length; i++) {
-            final int which = i; TextView row = text(names[i], 16, 0xFFD2E5DC); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(8), 0, 0, 0);
-            row.setOnClickListener(v -> {
-            long now = System.currentTimeMillis();
-            simulate.accept(new SoundEvent("demo:"+now,labels[which],names[which],now,now,false));
-            }); body.addView(row, new LinearLayout.LayoutParams(-1, dp(58)));
-        }
-        activity.showDrawerPage("模拟声音事件", true, this::previews, body);
     }
     private TextView text(String value, float size, int color) {
         TextView view = new TextView(activity); view.setText(value); view.setTextSize(size); view.setTextColor(color); return view;
