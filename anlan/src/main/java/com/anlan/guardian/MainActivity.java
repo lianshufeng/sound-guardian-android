@@ -324,7 +324,15 @@ public final class MainActivity extends Activity {
     }
     void showPanel() {
         behavior.touch(SystemClock.elapsedRealtime());
-        new ControlPanel(this, emotion -> { behavior.preview(emotion, SystemClock.elapsedRealtime()); render(); }).show();
+        new ControlPanel(this, emotion -> { behavior.preview(emotion, SystemClock.elapsedRealtime()); render(); },
+                event -> {
+                    behavior.simulate(event, SystemClock.elapsedRealtime());
+                    if (event.label.equals("Finger snapping")) {
+                        try { SpeechPlayback.speak(InteractionPorts.SpeechRequest.fingerSnaps(event.id)); }
+                        catch (IllegalStateException error) { android.widget.Toast.makeText(this, "请先开启声音守护", android.widget.Toast.LENGTH_SHORT).show(); }
+                    }
+                    render();
+                }).show();
     }
     void showDrawer(String title, String[] items, boolean nested, Runnable back, Consumer<Integer> select) {
         LinearLayout rows = new LinearLayout(this); rows.setOrientation(LinearLayout.VERTICAL);
