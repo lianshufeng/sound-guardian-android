@@ -32,6 +32,7 @@ final class AiModelPanel {
         EditText model = field("模型名称", profile.model, false); body.addView(model);
         CheckBox thinking = new CheckBox(activity); thinking.setText("优先快速回答"); thinking.setTextSize(15); thinking.setTextColor(0xFFD2E5DC); thinking.setChecked(profile.disableThinking); body.addView(thinking);
         CheckBox cue = new CheckBox(activity); cue.setText("后续对话和关怀回复前播放提示音"); cue.setTextSize(15); cue.setTextColor(0xFFD2E5DC); cue.setChecked(profile.cue); body.addView(cue);
+        CheckBox webSearch = new CheckBox(activity); webSearch.setText("允许联网搜索（Qwen等支持的模型）"); webSearch.setTextSize(15); webSearch.setTextColor(0xFFD2E5DC); webSearch.setChecked(profile.webSearch); body.addView(webSearch);
         TextView status = text(loadError, 13, 0xFFE6A27E); status.setPadding(dp(8), dp(10), dp(8), dp(8)); body.addView(status);
         LinearLayout actions = new LinearLayout(activity); actions.setGravity(Gravity.CENTER); Button test = button("测试连接"), save = button("保存"), clear = button("清除");
         actions.addView(test, new LinearLayout.LayoutParams(0, dp(50), 1)); actions.addView(save, new LinearLayout.LayoutParams(0, dp(50), 1)); actions.addView(clear, new LinearLayout.LayoutParams(0, dp(50), 1)); body.addView(actions);
@@ -39,7 +40,7 @@ final class AiModelPanel {
             try {
                 String value = token.getText().toString();
                 if ("••••••••".equals(value)) value = settings.load().token;
-                settings.save(new AiSettings.Profile(enabled.isChecked(), url.getText().toString(), value, model.getText().toString(), thinking.isChecked(), cue.isChecked()));
+                settings.save(new AiSettings.Profile(enabled.isChecked(), url.getText().toString(), value, model.getText().toString(), thinking.isChecked(), cue.isChecked(), webSearch.isChecked()));
                 status.setText("已保存"); status.setTextColor(0xFFA6C1B8);
             } catch (Exception error) { status.setText(error.getMessage() == null ? "保存失败" : error.getMessage()); status.setTextColor(0xFFE6A27E); }
         });
@@ -47,7 +48,7 @@ final class AiModelPanel {
         test.setOnClickListener(v -> {
             try {
                 String value = token.getText().toString(); if ("••••••••".equals(value)) value = settings.load().token;
-                AiSettings.Profile candidate = new AiSettings.Profile(true, url.getText().toString(), value, model.getText().toString(), thinking.isChecked(), cue.isChecked());
+                AiSettings.Profile candidate = new AiSettings.Profile(true, url.getText().toString(), value, model.getText().toString(), thinking.isChecked(), cue.isChecked(), webSearch.isChecked());
                 String normalized = AiSettings.normalizeUrl(candidate.baseUrl);
                 if (candidate.model.trim().isEmpty()) throw new IllegalArgumentException("请填写模型名");
                 status.setText("正在测试连接…"); status.setTextColor(0xFFA6C1B8); test.setEnabled(false);

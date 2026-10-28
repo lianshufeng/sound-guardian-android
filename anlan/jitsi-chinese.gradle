@@ -32,5 +32,5 @@ def chineseBundle = tasks.register('prepareJitsiChineseBundle') {
         target.setText(source.replace(marker, patch + marker), 'UTF-8')
     }
 }
-android.sourceSets.main.assets.srcDir(files(chineseAssets).builtBy(chineseBundle))
+project.extensions.getByName('android').sourceSets.getByName('main').assets.srcDir(files(chineseAssets).builtBy(chineseBundle))
 tasks.named('preBuild').configure { dependsOn(chineseBundle) }

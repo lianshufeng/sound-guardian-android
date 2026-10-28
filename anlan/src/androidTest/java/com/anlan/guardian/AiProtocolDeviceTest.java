@@ -35,7 +35,7 @@ public final class AiProtocolDeviceTest {
             agent.stream("mock",Collections.singletonList(new InteractionPorts.DialogueMessage("user","你好")),100,new InteractionPorts.DialogueAgent.Reply(){
                 public void onDelta(String text){body.append(text);}public void onComplete(String reason){result.set("OK");finished.countDown();}public void onError(String reason){result.set(reason);finished.countDown();}
             });assertTrue(finished.await(5,TimeUnit.SECONDS));
-            if(code==200){String payload=request.toString("UTF-8");assertTrue(payload.contains("\"enable_thinking\":false"));assertTrue(payload.contains("\"stream\":true"));}
+            if(code==200){String payload=request.toString("UTF-8");assertTrue(payload.contains("\"enable_thinking\":false"));assertTrue(payload.contains("\"enable_search\":true"));assertTrue(payload.contains("\"stream\":true"));}
             return result.get();
         }
     }

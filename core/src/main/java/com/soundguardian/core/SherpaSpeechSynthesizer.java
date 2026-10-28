@@ -4,11 +4,7 @@ import android.content.Context;
 import com.k2fsa.sherpa.onnx.GeneratedAudio;
 import com.k2fsa.sherpa.onnx.OfflineTts;
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig;
-import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import org.json.JSONObject;
 
 /** 共享中文合成适配器，只产生 PCM；业务必须通过应用的统一 SpeechOutput 播报。 */
@@ -21,18 +17,14 @@ public final class SherpaSpeechSynthesizer implements AutoCloseable {
         JSONObject settings = new JSONObject(AppConfig.read(context, "tts/config.json"));
         speaker = settings.getInt("speaker_id"); speed = (float) settings.getDouble("speed");
         if (speaker < 0 || speed <= 0 || !Float.isFinite(speed)) throw new IOException("TTS 音色或语速配置不合法");
+        JSONObject manifest = new JSONObject(AppConfig.read(context, "tts/manifest.json"));
+        if (!"sherpa-onnx-vits-zh-ll".equals(manifest.getString("model"))) throw new IOException("TTS 模型类型不合法");
         String base = "tts/model/";
-        String revision = new JSONObject(AppConfig.read(context, "tts/manifest.json")).getString("archive_sha256");
-        if (!revision.matches("[a-f0-9]{64}")) throw new IOException("TTS 模型版本清单不合法");
-        File data = new File(context.getFilesDir(), "tts-" + revision.substring(0, 16) + "/espeak-ng-data");
-        copyData(context, base + "espeak-ng-data", data);
         OfflineTtsConfig config = new OfflineTtsConfig();
         config.getModel().setNumThreads(settings.getInt("num_threads"));
-        OfflineTtsKokoroModelConfig model = config.getModel().getKokoro();
-        model.setModel(base + "model.onnx"); model.setVoices(base + "voices.bin");
-        model.setTokens(base + "tokens.txt"); model.setDataDir(data.getAbsolutePath());
-        model.setLexicon(base + "lexicon-us-en.txt," + base + "lexicon-zh.txt");
-        config.setRuleFsts(base + "date-zh.fst," + base + "number-zh.fst," + base + "phone-zh.fst");
+        com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig model = config.getModel().getVits();
+        model.setModel(base + "model.onnx"); model.setLexicon(base + "lexicon.txt"); model.setTokens(base + "tokens.txt");
+        config.setRuleFsts(base + "phone.fst," + base + "date.fst," + base + "number.fst");
         tts = new OfflineTts(context.getAssets(), config);
         if (speaker >= tts.numSpeakers()) { tts.release(); throw new IOException("TTS 音色编号超出模型范围"); }
     }
@@ -58,19 +50,5 @@ public final class SherpaSpeechSynthesizer implements AutoCloseable {
         return audio;
     }
 
-    private static synchronized void copyData(Context context, String asset, File target) throws IOException {
-        String[] children = context.getAssets().list(asset);
-        if (children != null && children.length > 0) {
-            if (!target.isDirectory() && !target.mkdirs()) throw new IOException("TTS 数据目录创建失败");
-            for (String child : children) copyData(context, asset + "/" + child, new File(target, child));
-        } else if (!target.isFile()) {
-            File temporary = new File(target.getPath() + ".tmp");
-            try (InputStream in = context.getAssets().open(asset); FileOutputStream out = new FileOutputStream(temporary)) {
-                byte[] buffer = new byte[8192]; int count;
-                while ((count = in.read(buffer)) != -1) out.write(buffer, 0, count);
-            }
-            if (!temporary.renameTo(target)) throw new IOException("TTS 数据文件写入失败");
-        }
-    }
     @Override public void close() { tts.release(); }
 }

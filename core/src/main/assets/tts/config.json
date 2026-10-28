@@ -1,7 +1,7 @@
 {
-  "voice": "zf_001",
-  "speaker_id": 3,
-  "speed": 0.95,
+  "voice": "gunian",
+  "speaker_id": 1,
+  "speed": 0.7,
   "num_threads": 2,
   "stream": {
     "min_chars": 12,

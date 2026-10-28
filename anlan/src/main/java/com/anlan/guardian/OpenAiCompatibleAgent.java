@@ -64,6 +64,7 @@ final class OpenAiCompatibleAgent implements InteractionPorts.DialogueAgent, Aut
             for (InteractionPorts.DialogueMessage message : messages) rows.put(new JSONObject().put("role", message.role).put("content", message.text));
             JSONObject body = new JSONObject().put("model", profile.model).put("stream", true).put("messages", rows).put("max_tokens", maxTokens);
             if (profile.disableThinking) body.put("enable_thinking", false);
+            if (profile.webSearch) body.put("enable_search", true);
             byte[] encoded = body.toString().getBytes(StandardCharsets.UTF_8);
             connection.setFixedLengthStreamingMode(encoded.length);
             try (OutputStream output = connection.getOutputStream()) { output.write(encoded); }

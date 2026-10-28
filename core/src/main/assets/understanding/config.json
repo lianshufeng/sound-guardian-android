@@ -1,11 +1,11 @@
 {
   "sample_rate": 16000,
   "language": "zh",
-  "num_threads": 1,
+  "num_threads": 2,
   "vad_threshold": 0.5,
   "min_speech_s": 0.35,
-  "min_silence_s": 0.65,
-  "max_segment_s": 4.0,
+  "min_silence_s": 2.5,
+  "max_segment_s": 4,
   "session_silence_ms": 4000,
   "idle_release_ms": 60000
 }

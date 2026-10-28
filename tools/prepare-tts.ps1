@@ -30,4 +30,4 @@ if ($missingTts.Count -gt 0) {
     }
 }
 foreach ($entry in $ttsManifest.files.PSObject.Properties) { Assert-Hash (Join-Path $ttsModelDirectory $entry.Name) $entry.Value }
-Write-Output 'Offline Chinese TTS ready. SHA-256 verified. Voice: zf_001 (sid=3).'
+Write-Output 'Offline Chinese VITS TTS ready. SHA-256 verified. Voice: gunian (sid=1), speed=0.70.'

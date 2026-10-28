@@ -1,13 +1,11 @@
-Kokoro v1.1-zh int8 / kokoro-int8-multi-lang-v1_1
-https://huggingface.co/hexgrad/Kokoro-82M-v1.1-zh
-https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese-English/kokoro-multi-lang-v1_1.html
-Model license: Apache-2.0. See LICENSE-kokoro.txt.
-Chinese female voice zf_001 maps to speaker ID 3 in this exact model package.
+Sherpa-ONNX VITS Chinese model: sherpa-onnx-vits-zh-ll
+https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2
+https://github.com/Plachtaa/VITS-fast-fine-tuning
+The archive README identifies the upstream training project. Verify the model
+and dataset license before commercial distribution; this repository does not
+claim an additional model license.
+Chinese speakers 0-4 are provided by the fixed model package; the app uses
+speaker 1 (gunian).
 
 The runtime is sherpa-onnx 1.13.8. Its Apache-2.0 license and ONNX Runtime
-MIT license are included under assets/wakeword/.
-
-The model package includes eSpeak NG linguistic data (GPL-3.0-or-later).
-https://github.com/espeak-ng/espeak-ng
-See LICENSE-espeak-ng.txt. The data files are retained without modification;
-the preparation script retrieves the fixed upstream package recorded in manifest.json.
+MIT license are included under assets/wakeword/

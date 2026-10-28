@@ -18,11 +18,14 @@ final class AiSettings {
     private static final String ALIAS = "anlan.ai.token.v1";
     final SharedPreferences preferences;
     static final class Profile {
-        final boolean enabled, disableThinking, cue;
+        final boolean enabled, disableThinking, cue, webSearch;
         final String baseUrl, token, model;
         Profile(boolean enabled, String url, String token, String model, boolean thinking, boolean cue) {
+            this(enabled, url, token, model, thinking, cue, true);
+        }
+        Profile(boolean enabled, String url, String token, String model, boolean thinking, boolean cue, boolean webSearch) {
             this.enabled = enabled; baseUrl = url; this.token = token; this.model = model;
-            disableThinking = thinking; this.cue = cue;
+            disableThinking = thinking; this.cue = cue; this.webSearch = webSearch;
         }
         boolean ready() { return enabled && !baseUrl.isEmpty() && !model.isEmpty(); }
     }
@@ -51,7 +54,7 @@ final class AiSettings {
             } catch (Exception error) { throw new IllegalStateException("访问密钥无法解密，请在AI模型设置中重新填写"); }
         }
         return new Profile(preferences.getBoolean("enabled", false), preferences.getString("url", ""), token,
-                preferences.getString("model", ""), preferences.getBoolean("disable_thinking", true), preferences.getBoolean("cue", true));
+                preferences.getString("model", ""), preferences.getBoolean("disable_thinking", true), preferences.getBoolean("cue", true), preferences.getBoolean("web_search", true));
     }
     synchronized void save(Profile profile) throws Exception {
         String url = profile.baseUrl.isEmpty() && !profile.enabled ? "" : normalizeUrl(profile.baseUrl);
@@ -64,7 +67,7 @@ final class AiSettings {
                     + Base64.encodeToString(cipher.doFinal(profile.token.getBytes(StandardCharsets.UTF_8)), Base64.NO_WRAP);
         }
         if (!preferences.edit().putString("url", url).putString("token", encrypted).putString("model", profile.model.trim())
-                .putBoolean("disable_thinking", profile.disableThinking).putBoolean("cue", profile.cue).putBoolean("enabled", profile.enabled).commit())
+                .putBoolean("disable_thinking", profile.disableThinking).putBoolean("cue", profile.cue).putBoolean("web_search", profile.webSearch).putBoolean("enabled", profile.enabled).commit())
             throw new IllegalStateException("配置保存失败，请重试");
     }
     void clear() { if (!preferences.edit().clear().commit()) throw new IllegalStateException("配置清除失败"); }
