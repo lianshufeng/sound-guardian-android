@@ -1,7 +1,7 @@
 {
-  "voice": "gunian",
-  "speaker_id": 1,
-  "speed": 0.7,
+  "voice": "baker",
+  "speaker_id": 0,
+  "speed": 0.8,
   "num_threads": 2,
   "stream": {
     "min_chars": 12,

@@ -110,7 +110,11 @@ tasks.register('verifyTtsAssets') {
             if (hash.digest().encodeHex().toString() != expected) throw new GradleException("TTS 资产哈希不一致：${name}")
         }
         def config = new groovy.json.JsonSlurper().parse(new File(assets, 'config.json'), 'UTF-8')
-        if (manifest.model != 'sherpa-onnx-vits-zh-ll' || manifest.sample_rate != 16000
+        def packaged = fileTree(new File(assets, 'model')).files.collect {
+            new File(assets, 'model').toPath().relativize(it.toPath()).toString().replace('\\', '/')
+        }.toSet()
+        if (packaged != manifest.files.keySet()) throw new GradleException('TTS 目录包含遗漏或旧模型文件，请按准备说明迁移，禁止同时打包旧模型')
+        if (manifest.runtime_version != '1.13.8' || manifest.model != 'matcha-icefall-zh-baker' || manifest.sample_rate != 22050
                 || manifest.voices[config.voice] != config.speaker_id || !(config.speed > 0 && config.speed <= 2)
                 || !(config.num_threads >= 1 && config.num_threads <= 4)) throw new GradleException('TTS 中文音色、语速或线程配置不合法')
         def stream = config.stream

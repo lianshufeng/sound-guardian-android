@@ -56,7 +56,7 @@
 - 所有业务文字播报只能调用 `SpeechPlayback.speak(String)`、`SpeechPlayback.speak(InteractionPorts.SpeechRequest)` 或 `SpeechPlayback.openStream(...)`。禁止在页面、事件逻辑或未来关怀模块直接创建 TTS、AudioTrack、MediaPlayer 或其他播音实例。
 - `GuardianService` 只绑定一个播报会话；`LocalSpeechOutput` 是唯一实际合成与播放实现，`InteractionPorts.SpeechOutput` 是内部适配契约。“我在”、响指固定回应及所有动态文字均使用同一套 sherpa-onnx 本地中文 TTS，不另设固定短句播放器。普通播报也由独立消费线程播放，缓存与提示音可绕过尚未退出的native合成；旧任务不得恢复播放。
 - 字幕使用同一个请求的 `text`，由真实播放的开始、结束、取消和失败回调驱动；禁止在唤醒检测或合成开始时提前显示为正在播报。播放开始和可见字幕更新在主线程同步执行；界面重建不得重复播报。
-- 音色与语速统一维护在 `core/src/main/assets/tts/config.json`，当前使用 Kokoro v1.1-zh FP32 中文女声 `zf_001`（该固定模型包中 `sid=3`）、语速 0.95。模型及语言数据通过 `tools/prepare-tts.ps1` 获取，哈希维护在 `tts/manifest.json`，不得绕过校验或提交模型权重。
+- 音色与语速统一维护在 `core/src/main/assets/tts/config.json`，当前使用 Matcha 中文 Baker 单女声 `baker`（`sid=0`，22050 Hz）及 Vocos 声码器，语速 0.80、2线程。两者属于同一 TTS 合成器，仍受单项重型作业许可约束。资产通过 `tools/prepare-tts.ps1` 获取，哈希维护在 `tts/manifest.json`，不得绕过校验或提交模型权重；Baker 数据集仅限非商业使用，分发须保留 NOTICE 和上游说明。
 - TTS 返回的样本必须通过非空、有限值和非静音校验，NaN/Infinity 不得转换成静音后报告播放成功。当前 INT8 权重在 ARM64 真机出现全 NaN，降至单线程仍失败；重新启用量化前，须验证冷启动、模型重载、动态中文及真实可听输出，不能只以播放进度或模拟器通过作结论。
 - 播报按单会话串行执行，新请求替换旧请求；高优先级声音事件可中断播报。播报准备、播放及结束后短暂尾音期抑制关键词唤醒并清除解码缓存，YAMNet 音频采集和守护继续运行。服务停止必须取消声音和字幕，旧会话回调不得影响新会话。
 - 低内存回收必须明确取消当前普通及流式播报并排队释放模型；缓存写入与回收共用资源代次及短锁校验，禁止旧合成在回收后重新填入缓存。

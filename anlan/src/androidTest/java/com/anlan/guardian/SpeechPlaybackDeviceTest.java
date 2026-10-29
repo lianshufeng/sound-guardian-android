@@ -200,6 +200,7 @@ public final class SpeechPlaybackDeviceTest {
         try (com.soundguardian.core.SherpaSpeechSynthesizer model = new com.soundguardian.core.SherpaSpeechSynthesizer(app)) {
             audio = model.synthesize("我在");
         }
+        assertEquals("Matcha Baker 输出须符合清单", 22050, audio.getSampleRate());
         float peak = 0; double energy = 0; int nonFinite = 0;
         for (float value : audio.getSamples()) {
             if (!Float.isFinite(value)) { nonFinite++; continue; }

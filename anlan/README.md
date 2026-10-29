@@ -17,7 +17,7 @@
 - 模型：与原项目相同的 Google MediaPipe YAMNet float32/1
 - 模型声音文字：开启显示后，将分数不低于25%的所有分类按分数接入轮流展示，不再截为前三类；每500毫秒最多新增一个气泡，同类4.8秒内不重复，限频期间最多暂存12类，同类更新不插队，超过3.2秒未再出现则丢弃，隐藏页面或停止守护时清空。分类文字不等于正式事件，容量限制下仍可能丢弃过期候选，也不保证混合声音全部识别。
 - 唤醒：本地 sherpa-onnx 检测“小糖”，触发收到、聆听和超时恢复守护
-- 播报：本地 sherpa-onnx VITS 中文模型 `bazong`（16 kHz，sid=4，语速0.85），唤醒时语音与字幕同步回应“我在”；合成器按设备内存预算按需驻留
+- 播报：本地 sherpa-onnx Matcha 中文 Baker 单女声（22.05 kHz，sid=0，语速0.80、2线程）及 Vocos 声码器，唤醒时语音与字幕同步回应“我在”；合成器按设备内存预算驻留。Baker 数据集仅限非商业使用；低端真机性能和音质须单独验收。
 - 性能模式：设置内可选“高性能”（默认）或“节省内存”。高性能保留已加载的TTS和文字/情绪模型，减少重复加载等待；节省内存空闲后释放（低内存档10秒、普通档60秒）。设置保存并即时生效，不自动开启持续倾听；两种模式遇到内存回收或服务停止均释放，首次加载及推理仍需等待，真机功耗收益未验收。
 - 主动关怀：告知、等待回复、场景开关和有界记录；关怀分类支持全选、反选，关怀记录及对话文字自动保存、最多保留3天；一轮结果保留，启用 AI 后可关联后续对话，主动关怀不自动发起远程通话
 - AI 对话：一级菜单“AI模型”（位于“关于”上方）配置后接入 OpenAI 兼容流式服务；AI模型设置可控制联网搜索，Qwen等支持的模型请求会加入百炼 enable_search，支持唤醒/点击左上角“红糖”、简短交流、故事和关怀续聊，顶部不再单列“说话”按钮；首轮跳过额外叮声并缩短尾音保护，输入就绪即提示“请说话”。底部白蓝渐变波浪等待时呼吸并在倾听时随采集音量起伏，不显示倒计时；首轮就绪后6秒未开口退出，后续仍为3秒。当前话轮识别结束后关闭输入，完成模型生成及整段语音播放后才开放下一轮；思考、生成和播放期间只有再次说“小糖”会取消当前回答并重新唤醒，普通讲话不会打断；唤醒后正在收集本轮输入时忽略重复“小糖”，必须完成本轮输入。无正文等待3秒显示“还在想，请稍候”，收到正文显示“正在准备声音”；仍受网络及会话时限约束。底部无结束按钮，返回键可结束当前对话或关怀，菜单内仍先返回菜单。默认配置为空。当前验收和限制见 [AI 对话](docs/ai-dialogue-development-plan.md)
@@ -46,7 +46,7 @@
 
 首次构建唤醒功能还需在仓库根目录执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-wakeword.ps1`。该脚本下载固定版本的 sherpa-onnx Android 运行库和中文 KWS 模型，校验 SHA-256 后准备本地依赖；运行时不需要网络。唤醒模型、关键词和许可证说明位于 `core/src/main/assets/wakeword/`，输入音频与 YAMNet 共用同一条 16 kHz 单声道 PCM 流。
 
-当前版本还需执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-tts.ps1`（包含唤醒依赖准备）。TTS VITS 模型、词典和规则文件保存在 `core/src/main/assets/tts/model/`，不提交 Git；固定下载来源和 SHA-256 位于 `tts/manifest.json`，音色与语速位于 `tts/config.json`，构建前由 `core:verifyTtsAssets` 校验。模型在后台加载、预热“我在”并在空闲时补齐响指回应，高性能保留合成器，节省内存在预热结束后释放，仅保留有界短句缓存；首次就绪前可能需要等待，菜单“设备状态”可查看播报加载状态和错误。模型许可证需按 `tts/NOTICE.txt` 在分发前确认。
+当前版本还需执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-tts.ps1`（包含唤醒依赖准备）。TTS Matcha 声学模型、Vocos 声码器、词典和规则文件保存在 `core/src/main/assets/tts/model/`，不提交 Git；固定下载来源和 SHA-256 位于 `tts/manifest.json`，音色与语速位于 `tts/config.json`，构建前由 `core:verifyTtsAssets` 校验。模型在后台加载、预热“我在”并在空闲时补齐响指回应，高性能保留合成器，节省内存在预热结束后释放，仅保留有界短句缓存；首次就绪前可能需要等待，菜单“设备状态”可查看播报加载状态和错误。Baker 数据集仅限非商业使用，来源和限制见 `tts/NOTICE.txt`。脚本在新资产全部校验通过后将旧 VITS 目录移至 evaluation/tts-setup/vits-backup-*，正式 APK 仅保留新资产。
 
 文字及情绪识别还需执行 `powershell -ExecutionPolicy Bypass -File tools/prepare-understanding.ps1`。SenseVoice INT8 与 Silero VAD 通过现有 sherpa-onnx 运行；模型契约、配置、哈希和许可证在 `core/src/main/assets/understanding/`，构建前由 `core:verifyUnderstandingAssets` 校验。详见 [触摸互动与陪伴倾听](docs/interaction.md)。
 

@@ -97,8 +97,13 @@ public final class ResourceProfileDeviceTest {
                     report("tts_load", 0); begin();
                     com.k2fsa.sherpa.onnx.GeneratedAudio audio = model.synthesize("我在");
                     report("tts_wake_synthesize", audio.getSamples().length * 1000.0 / audio.getSampleRate()); begin();
-                    audio = model.synthesize("你好，我是小糖。我会在这里，安静地陪伴你。");
-                    report("tts_sentence_synthesize", audio.getSamples().length * 1000.0 / audio.getSampleRate());
+                    boolean longSample = "true".equals(args.getString("tts_long_sample"));
+                    String text = longSample ? "我在这里陪着你。今天无论你是在家里休息、阅读、做饭，还是处理一些日常事务，都可以随时叫我的名字。我会认真听你说话，在合适的时候给出回应，也会在检测到重要声音时及时提醒你注意周围环境。希望我的陪伴能让你的每一天都更加安心、轻松和温暖。"
+                            : "你好，我是小糖。我会在这里，安静地陪伴你。";
+                    for (int i = 0; i < (longSample ? 3 : 1); i++) {
+                        begin(); audio = model.synthesize(text);
+                        report(longSample ? "tts_116_chars_" + i : "tts_sentence_synthesize", audio.getSamples().length * 1000.0 / audio.getSampleRate());
+                    }
                 }
                 break;
             case "companion":

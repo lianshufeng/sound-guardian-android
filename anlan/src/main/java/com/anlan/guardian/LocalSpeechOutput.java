@@ -84,7 +84,7 @@ final class LocalSpeechOutput implements InteractionPorts.SpeechOutput {
             } finally {
                 if (closed || memoryTrimmed || initializationError != null || !keepModel) releaseSynthesizer();
                 if (wakeReady && initializationError == null)
-                    main.post(() -> { if (!closed&&resourceEpoch==initialEpoch) status.accept("已就绪 · 中文 VITS 声音"); });
+                    main.post(() -> { if (!closed&&resourceEpoch==initialEpoch) status.accept("已就绪 · 中文女声"); });
             }
         };
         WORKER.execute(initialize);

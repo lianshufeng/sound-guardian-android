@@ -18,15 +18,19 @@ public final class SherpaSpeechSynthesizer implements AutoCloseable {
         speaker = settings.getInt("speaker_id"); speed = (float) settings.getDouble("speed");
         if (speaker < 0 || speed <= 0 || !Float.isFinite(speed)) throw new IOException("TTS 音色或语速配置不合法");
         JSONObject manifest = new JSONObject(AppConfig.read(context, "tts/manifest.json"));
-        if (!"sherpa-onnx-vits-zh-ll".equals(manifest.getString("model"))) throw new IOException("TTS 模型类型不合法");
+        if (!"matcha-icefall-zh-baker".equals(manifest.getString("model")) || manifest.getInt("sample_rate") != 22050)
+            throw new IOException("TTS 模型类型或采样率不合法");
         String base = "tts/model/";
         OfflineTtsConfig config = new OfflineTtsConfig();
         config.getModel().setNumThreads(settings.getInt("num_threads"));
-        com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig model = config.getModel().getVits();
-        model.setModel(base + "model.onnx"); model.setLexicon(base + "lexicon.txt"); model.setTokens(base + "tokens.txt");
+        com.k2fsa.sherpa.onnx.OfflineTtsMatchaModelConfig model = config.getModel().getMatcha();
+        model.setAcousticModel(base + "model-steps-3.onnx"); model.setVocoder(base + "vocos-22khz-univ.onnx");
+        model.setLexicon(base + "lexicon.txt"); model.setTokens(base + "tokens.txt");
         config.setRuleFsts(base + "phone.fst," + base + "date.fst," + base + "number.fst");
         tts = new OfflineTts(context.getAssets(), config);
-        if (speaker >= tts.numSpeakers()) { tts.release(); throw new IOException("TTS 音色编号超出模型范围"); }
+        if (speaker >= tts.numSpeakers() || tts.sampleRate() != manifest.getInt("sample_rate")) {
+            tts.release(); throw new IOException("TTS 音色编号或输出采样率不符合清单");
+        }
     }
 
     public GeneratedAudio synthesize(String text) {

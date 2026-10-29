@@ -1,11 +1,14 @@
-Sherpa-ONNX VITS Chinese model: sherpa-onnx-vits-zh-ll
-https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2
-https://github.com/Plachtaa/VITS-fast-fine-tuning
-The archive README identifies the upstream training project. Verify the model
-and dataset license before commercial distribution; this repository does not
-claim an additional model license.
-Chinese speakers 0-4 are provided by the fixed model package; the app uses
-speaker 1 (gunian).
+Sherpa-ONNX Matcha Chinese model: matcha-icefall-zh-baker
+https://github.com/k2-fsa/icefall/tree/master/egs/baker_zh/TTS
+https://k2-fsa.github.io/sherpa/onnx/tts/pretrained_models/matcha.html
+The upstream README states that the Baker dataset is for non-commercial use
+only. This model must not be treated as commercially licensed.
+https://en.data-baker.com/datasets/freeDatasets/
+The model has one Chinese female speaker, ID 0 (baker), at 22050 Hz.
+Vocoder: vocos-22khz-univ.onnx, distributed by sherpa-onnx.
+https://github.com/gemelo-ai/vocos
+Vocos source license: MIT; see LICENSE-vocos.txt.
+Acoustic model, vocoder and text assets are pinned in manifest.json.
 
 The runtime is sherpa-onnx 1.13.8. Its Apache-2.0 license and ONNX Runtime
 MIT license are included under assets/wakeword/

@@ -35,7 +35,7 @@ stream.end();       // 上游正常结束；播放剩余正文后才回调 onCom
 
 | 参数 | 当前值 | 行为 |
 | --- | --- | --- |
-| `speed` | 0.95 | 所有段落保持相同语速，不随 LLM 吐字速度调整 |
+| `speed` | 0.80 | 所有段落保持相同语速，不随 LLM 吐字速度调整；当前为 Matcha Baker + Vocos、2线程、22050 Hz |
 | `stream.min_chars` | 12 | 达到长度后允许按逗号、冒号或空格提前切分 |
 | `stream.max_chars` | 40 | 无标点内容也有分段上限，不拆 Unicode 代理对 |
 | `stream.max_pending_chars` | 512 | 待消费文字有界，满时整片段拒收；不是整场回答上限 |

@@ -1,25 +1,23 @@
 {
-  "model": "sherpa-onnx-vits-zh-ll",
-  "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-vits-zh-ll.tar.bz2",
-  "archive_sha256": "f7393d1bbc59709d5f52ea76cd5bceeec62f6a29f9c1f79ff44b4c15ec841f3a",
+  "model": "matcha-icefall-zh-baker",
+  "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/matcha-icefall-zh-baker.tar.bz2",
+  "archive_sha256": "8da2e113b85dfea37b11bcdc994506aa86b584ee3348c2065271fb6f75cb83b8",
+  "vocoder_source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx",
+  "vocoder_sha256": "0574a135aa1db2de6e181050db2ec528496cacd4a4701fc5d7faf9f9804c0081",
   "runtime_version": "1.13.8",
-  "license": "See README.md; upstream license must be confirmed before distribution",
-  "sample_rate": 16000,
+  "license": "Baker dataset: non-commercial use only; see NOTICE.txt",
+  "sample_rate": 22050,
   "voices": {
-    "suyingxue": 0,
-    "gunian": 1,
-    "fushiyu": 2,
-    "bingjiao": 3,
-    "bazong": 4
+    "baker": 0
   },
   "files": {
-    "model.onnx": "6c349bdd73dc928234dd7bc86929748bba32cd5264d32d915bf7b7aa0595965b",
-    "lexicon.txt": "b3a82f16b286c424953dea3686039e7ab465fa8e15d87ef8abd0ec69175beb21",
-    "tokens.txt": "34b035b9aeb070df6188b022f29c00e0e142c7ade9f25611ced65db5e9cc8402",
+    "model-steps-3.onnx": "78a9fd17e9a6c20198dca4e69d18f941303f8ab39ec61dde04cfc7595262ddfd",
+    "vocos-22khz-univ.onnx": "0574a135aa1db2de6e181050db2ec528496cacd4a4701fc5d7faf9f9804c0081",
+    "lexicon.txt": "38b886d46aefa50da6322a64d72fd595d5f4fae1051adb160d647541b1e0a4a2",
+    "tokens.txt": "56209b2bf609d5ac1d66ede6dae7bf5254bd3f8aa24c4a6823713d5b884d87ba",
     "date.fst": "eb8aa079ae3cb81d8f4404992f39d61a0cb990947512b5b8d1e54d1f6980e718",
     "number.fst": "743f402181fcfebf76cc2f0546b71fa26476e626fbe4e460fb7b4c3a7a8bd5bd",
     "phone.fst": "1ac2b6fa56b1442320c4de7db08353bab8963a2b57f365eebcdd3a2d3562f8d7",
-    "new_heteronym.fst": "ca14b2127e27baa571664e4bb791e143e7425f56a6bc29db08d74f97e6aa4e29",
-    "README.md": "bc51b9240f9512e1c9e5b859931d04b5c2b5062b44f63162f2f749f693ffebbd"
+    "README.md": "d47ef70781df15845b6f28c6c071dee9e51b52c36797a8130a620c5c8895929c"
   }
 }
